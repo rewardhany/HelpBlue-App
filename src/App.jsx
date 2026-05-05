@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Menu, ShieldHalf, Lightbulb, Wand2, Play, ArrowRight, Eye, Share2, Mail, 
   Home, Clock, MessageCircle, User, PlusCircle, Search, ChevronRight, Star, 
   MapPin, Wallet, ArrowLeft, Send, CheckCircle, LogOut, 
   Settings, Bell, HelpCircle, History, Lock, Shield, Info, X, Filter, Navigation,
-  CreditCard, Smartphone, Building
+  CreditCard, Smartphone, Building, FileText, XCircle
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
@@ -24,10 +24,211 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = 'helpblue-demo-id';
 
+// MAP LOCATION PICKER COMPONENT
 
-// ============================================================================
-// KOMPONEN REUSABLE DIPINDAH KE LUAR AGAR TIDAK RE-RENDER (FIX BUG INPUT FOKUS)
-// ============================================================================
+const MapLocationPicker = ({ value, onChange, onClose }) => {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
+  const [address, setAddress] = useState(value || '');
+  const [loading, setLoading] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+
+  // Default center: Jakarta, Indonesia
+  const defaultCenter = [-6.2088, 106.8456];
+
+  useEffect(() => {
+    // Load Leaflet CSS
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+
+    // Load Leaflet JS
+    const loadLeaflet = () => {
+      if (window.L) {
+        initMap();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = () => initMap();
+      document.head.appendChild(script);
+    };
+
+    const initMap = () => {
+      if (!mapRef.current || mapInstanceRef.current) return;
+
+      const L = window.L;
+
+      // Fix default icon paths for Leaflet
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      });
+
+      const map = L.map(mapRef.current, {
+        center: defaultCenter,
+        zoom: 13,
+        zoomControl: true,
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(map);
+
+      // Custom blue marker
+      const blueIcon = L.divIcon({
+        className: '',
+        html: `<div style="
+          width: 36px; height: 36px;
+          background: #2563eb;
+          border: 3px solid white;
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          box-shadow: 0 4px 14px rgba(37,99,235,0.5);
+        "></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+      });
+
+      const marker = L.marker(defaultCenter, { draggable: true, icon: blueIcon }).addTo(map);
+      markerRef.current = marker;
+
+      // Reverse geocode on marker drag end
+      marker.on('dragend', async () => {
+        const pos = marker.getLatLng();
+        await reverseGeocode(pos.lat, pos.lng);
+      });
+
+      // Click on map to move marker
+      map.on('click', async (e) => {
+        marker.setLatLng(e.latlng);
+        await reverseGeocode(e.latlng.lat, e.latlng.lng);
+      });
+
+      // Try to get user's current location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const { latitude, longitude } = pos.coords;
+            map.setView([latitude, longitude], 15);
+            marker.setLatLng([latitude, longitude]);
+            await reverseGeocode(latitude, longitude);
+          },
+          () => {
+            // fallback: just use Jakarta
+            reverseGeocode(defaultCenter[0], defaultCenter[1]);
+          },
+          { timeout: 5000 }
+        );
+      } else {
+        reverseGeocode(defaultCenter[0], defaultCenter[1]);
+      }
+
+      mapInstanceRef.current = map;
+      setMapReady(true);
+    };
+
+    loadLeaflet();
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  const reverseGeocode = async (lat, lng) => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=id`,
+        { headers: { 'Accept-Language': 'id' } }
+      );
+      const data = await res.json();
+      const displayName = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      setAddress(displayName);
+    } catch {
+      setAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirm = () => {
+    onChange(address);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex flex-col bg-white">
+      {/* Header */}
+      <div className="flex items-center gap-4 p-4 bg-white border-b border-slate-100 shadow-sm z-10">
+        <button onClick={onClose} className="bg-slate-100 p-2 rounded-xl text-slate-600 hover:bg-slate-200 transition">
+          <X size={22} />
+        </button>
+        <div>
+          <h2 className="font-black text-slate-800 text-lg">Pilih Lokasi di Peta</h2>
+          <p className="text-xs text-slate-500 font-medium">Tap peta atau seret pin untuk memilih lokasi</p>
+        </div>
+      </div>
+
+      {/* Map */}
+      <div className="flex-1 relative">
+        <div ref={mapRef} className="w-full h-full" style={{ minHeight: '60vh' }} />
+
+        {/* Center pin hint */}
+        {!mapReady && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm font-bold text-slate-500">Memuat peta...</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Address Result + Confirm */}
+      <div className="bg-white border-t border-slate-100 p-4 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
+        <div className="flex items-start gap-3 bg-slate-50 rounded-2xl p-4 mb-4 border border-slate-200">
+          <MapPin size={20} className="text-red-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Lokasi Dipilih</p>
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm text-slate-500 font-medium">Mencari alamat...</span>
+              </div>
+            ) : (
+              <p className="text-sm font-bold text-slate-700 leading-relaxed break-words">{address || 'Tap peta untuk memilih lokasi'}</p>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={handleConfirm}
+          disabled={!address || loading}
+          className={`w-full font-black py-4 rounded-2xl transition text-base shadow-lg ${
+            address && !loading
+              ? 'bg-blue-600 text-white shadow-blue-200 hover:bg-blue-700'
+              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+          }`}
+        >
+          Konfirmasi Lokasi Ini
+        </button>
+      </div>
+    </div>
+  );
+};
+
 
 const HeaderWithBack = ({ title, onBack }) => (
   <div className="bg-white p-6 sticky top-0 z-10 flex items-center gap-4 shadow-sm border-b border-slate-100">
@@ -95,8 +296,8 @@ const DashboardLayout = ({ children, currentView, handleNavigation, showNotif, s
       <nav className="flex-1 px-4 space-y-2 overflow-y-auto no-scrollbar">
         <SidebarItem icon={<Home size={20} />} label="Dashboard" active={currentView === 'home'} onClick={() => handleNavigation('home')} />
         <SidebarItem icon={<Clock size={20} />} label="My Activity" active={currentView === 'activity'} onClick={() => handleNavigation('activity')} />
-        <SidebarItem icon={<Search size={20} />} label="Explore Tasks" active={currentView === 'explore'} onClick={() => handleNavigation('explore')} />
-        <SidebarItem icon={<MessageCircle size={20} />} label="Messages" active={currentView === 'chat'} onClick={() => handleNavigation('chat')} />
+        <SidebarItem icon={<Search size={20} />} label="Find Helper" active={currentView === 'explore'} onClick={() => handleNavigation('explore')} />
+        <SidebarItem icon={<MessageCircle size={20} />} label="Messages" active={currentView === 'chat_list' || currentView === 'chat'} onClick={() => handleNavigation('chat_list')} />
         <SidebarItem icon={<User size={20} />} label="Profile" active={currentView === 'profile'} onClick={() => handleNavigation('profile')} />
         
         <div className="pt-6 mt-6 border-t border-slate-100">
@@ -120,7 +321,7 @@ const DashboardLayout = ({ children, currentView, handleNavigation, showNotif, s
       <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-100 flex justify-around p-2 pb-4 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-3xl">
         <BottomNavItem icon={<Home size={22} />} label="Home" active={currentView === 'home'} onClick={() => handleNavigation('home')} />
         <BottomNavItem icon={<Clock size={22} />} label="Activity" active={currentView === 'activity'} onClick={() => handleNavigation('activity')} />
-        <BottomNavItem icon={<MessageCircle size={22} />} label="Chat" active={currentView === 'chat'} onClick={() => handleNavigation('chat')} />
+        <BottomNavItem icon={<MessageCircle size={22} />} label="Chat" active={currentView === 'chat_list' || currentView === 'chat'} onClick={() => handleNavigation('chat_list')} />
         <BottomNavItem icon={<User size={22} />} label="Profile" active={currentView === 'profile'} onClick={() => handleNavigation('profile')} />
       </nav>
     </main>
@@ -128,9 +329,7 @@ const DashboardLayout = ({ children, currentView, handleNavigation, showNotif, s
 );
 
 
-// ============================================================================
 // MAIN APP COMPONENT
-// ============================================================================
 
 export default function App() {
   // STATE MANAGEMENT
@@ -138,21 +337,28 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [tasks, setTasks] = useState([]);
-  const [activityTab, setActivityTab] = useState('pending'); // pending, ongoing, history
+  const [activityTab, setActivityTab] = useState('pending');
   const [activeTask, setActiveTask] = useState(null);
+  const [taskDetailContext, setTaskDetailContext] = useState('user');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Form States
   const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '' });
-  const [taskForm, setTaskForm] = useState({ title: '', desc: '', budget: '', category: 'Cleaning' });
+  const [taskForm, setTaskForm] = useState({ title: '', desc: '', budget: '', category: 'Cleaning', location: '' });
   const [chatInput, setChatInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Map Location Picker State
+  const [showMapPicker, setShowMapPicker] = useState(false);
 
   // NEW FEATURES STATES
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('nearest'); // nearest, highest_pay
+  const [sortBy, setSortBy] = useState('nearest');
   const [showNotif, setShowNotif] = useState(false);
+
+  // Active chat contact state
+  const [activeChatContact, setActiveChatContact] = useState(null);
 
   // States for Edit Profile & Addresses & Topup
   const [editProfileData, setEditProfileData] = useState({ name: '', phone: '' });
@@ -163,6 +369,53 @@ export default function App() {
   
   const [topupAmount, setTopupAmount] = useState('');
   const [topupMethod, setTopupMethod] = useState('');
+
+  // Mock chat conversations list (WhatsApp-style)
+  const [chatConversations] = useState([
+    {
+      id: 1,
+      name: 'Alex (Helper)',
+      avatar: 'A',
+      lastMessage: 'Yes, everything is as described in the task!',
+      time: '10:02 AM',
+      unread: 2,
+      online: true,
+      task: 'Beli Kopi Cafetaria',
+      messages: [
+        { id: 1, from: 'helper', text: "Hi, I'm heading to the location now. Can you confirm the details?", time: '10:00 AM' },
+        { id: 2, from: 'user', text: 'Yes, everything is as described in the task!', time: '10:02 AM' },
+      ]
+    },
+    {
+      id: 2,
+      name: 'Budi (Helper)',
+      avatar: 'B',
+      lastMessage: 'Tugas sudah selesai, terima kasih!',
+      time: 'Kemarin',
+      unread: 0,
+      online: false,
+      task: 'Print Makalah',
+      messages: [
+        { id: 1, from: 'helper', text: 'Halo, saya sudah ambil tugasnya ya.', time: '14:00' },
+        { id: 2, from: 'user', text: 'Oke, terima kasih banyak!', time: '14:05' },
+        { id: 3, from: 'helper', text: 'Tugas sudah selesai, terima kasih!', time: '14:30' },
+      ]
+    },
+    {
+      id: 3,
+      name: 'Siti (Helper)',
+      avatar: 'S',
+      lastMessage: 'Siap, saya dalam perjalanan ke lokasi.',
+      time: '09:45 AM',
+      unread: 1,
+      online: true,
+      task: 'Kebersihan Kamar Kost',
+      messages: [
+        { id: 1, from: 'user', text: 'Halo, kapan bisa mulai?', time: '09:40 AM' },
+        { id: 2, from: 'helper', text: 'Siap, saya dalam perjalanan ke lokasi.', time: '09:45 AM' },
+      ]
+    },
+  ]);
 
   // Mock data
   const [notifications] = useState([
@@ -252,7 +505,6 @@ export default function App() {
 
   // ACTIONS
   const handleNavigation = (view) => {
-    // Siapkan data saat membuka halaman edit profil
     if (view === 'edit_profile' && userProfile) {
       setEditProfileData({ name: userProfile.name || '', phone: userProfile.phone || '081234567890' });
     }
@@ -304,27 +556,25 @@ export default function App() {
   const handlePostTask = async (e) => {
     e.preventDefault();
     
-    // FIX: Buat objek tugas baru
     const newTask = {
       title: taskForm.title,
       desc: taskForm.desc,
       budget: parseInt(taskForm.budget),
       category: taskForm.category,
-      status: 'available',
-      distance: 'Sekitar Kampus',
+      location: taskForm.location || 'Lokasi belum diset',
+      status: 'pending',
+      distance: taskForm.location || 'Lokasi belum diset',
       requesterId: user?.uid || 'guest-123',
       requesterName: userProfile?.name || 'Guest User',
       requesterRating: userProfile?.rating || 5.0,
       createdAt: new Date().toISOString()
     };
 
-    // FIX: Update UI secara instan (Local State) agar user merasa mulus
     setTasks(prev => [{ id: 'local-' + Date.now(), ...newTask }, ...prev]);
-    setTaskForm({ title: '', desc: '', budget: '', category: 'Cleaning' });
+    setTaskForm({ title: '', desc: '', budget: '', category: 'Cleaning', location: '' });
     setActivityTab('pending');
     handleNavigation('activity');
 
-    // FIX: Update Firebase jika user tersedia
     if (user && userProfile) {
       try {
         const taskRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'));
@@ -336,7 +586,6 @@ export default function App() {
   };
 
   const handleTakeTask = async (task) => {
-    // FIX: Fallback untuk simulasi
     if (!user || !userProfile) {
        setActivityTab('ongoing');
        handleNavigation('activity');
@@ -365,15 +614,24 @@ export default function App() {
     }
   };
 
-  // FUNGSI BARU UNTUK PROFIL & TOPUP
+  const handleCancelTask = async (taskId) => {
+    try {
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+      handleNavigation('activity');
+
+      const taskRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId);
+      await deleteDoc(taskRef);
+    } catch (err) {
+      console.error("Error cancelling task:", err);
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!user) return;
     
-    // Update Local State biar instan
     setUserProfile(prev => ({ ...prev, name: editProfileData.name, phone: editProfileData.phone }));
     
     try {
-      // Update Database Firebase
       const profileRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
       await updateDoc(profileRef, {
         name: editProfileData.name,
@@ -405,12 +663,10 @@ export default function App() {
     
     const amount = parseInt(topupAmount);
     
-    // Update balance
     if(userProfile) {
       setUserProfile(prev => ({ ...prev, balance: prev.balance + amount }));
     }
     
-    // Tambah riwayat
     const newHistory = {
       id: Date.now(),
       type: 'topup',
@@ -421,16 +677,12 @@ export default function App() {
     };
     setWalletHistory([newHistory, ...walletHistory]);
     
-    // Kembali ke dompet
     handleNavigation('wallet_history');
     setTopupAmount('');
     setTopupMethod('');
   };
 
-
-  // ============================================================================
-  // VIEWS (LANDING, LOGIN, REGISTER) - TIDAK DIUBAH SAMA SEKALI
-  // ============================================================================
+  // VIEWS (LANDING, LOGIN, REGISTER)
 
   if (currentView === 'landing') {
     return (
@@ -713,11 +965,8 @@ export default function App() {
     );
   }
 
-  // ============================================================================
   // DASHBOARD VIEWS
-  // ============================================================================
 
-  // PENTING: Gunakan komponen DashboardLayout yang sudah diperbarui dengan me-passing props
   const dashboardProps = { currentView, handleNavigation, showNotif, setShowNotif, notifications };
 
   if (currentView === 'home') {
@@ -740,7 +989,6 @@ export default function App() {
             </div>
           </div>
           
-          {/* FIX: Klik div pergi ke history, klik button Top Up pergi ke halaman Top Up */}
           <div onClick={() => handleNavigation('wallet_history')} className="bg-slate-900/40 border border-white/10 p-5 rounded-[2rem] flex items-center justify-between backdrop-blur-xl shadow-2xl cursor-pointer hover:bg-slate-900/60 transition-colors">
             <div className="flex items-center gap-4">
               <div className="bg-blue-500/50 p-3 rounded-2xl"><Wallet className="text-white" size={24}/></div>
@@ -764,23 +1012,27 @@ export default function App() {
             <p className="text-xs text-slate-500 font-medium mt-1">Need help?</p>
           </div>
           
-          <div onClick={() => handleNavigation('explore')} className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 cursor-pointer hover:-translate-y-1 transition-all flex flex-col items-center text-center group">
+          <div onClick={() => { setActivityTab('pending'); handleNavigation('activity'); }} className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 cursor-pointer hover:-translate-y-1 transition-all flex flex-col items-center text-center group">
             <div className="bg-emerald-50 p-5 rounded-3xl mb-4 group-hover:bg-emerald-500 transition-colors">
-              <Search size={36} className="text-emerald-600 group-hover:text-white transition-colors" />
+              <FileText size={36} className="text-emerald-600 group-hover:text-white transition-colors" />
             </div>
-            <h3 className="font-black text-slate-800 text-lg">Find Work</h3>
-            <p className="text-xs text-slate-500 font-medium mt-1">Be a helper</p>
+            <h3 className="font-black text-slate-800 text-lg">My Orders</h3>
+            <p className="text-xs text-slate-500 font-medium mt-1">Track your tasks</p>
           </div>
         </div>
 
         <div className="p-6 md:p-10 mt-2">
           <div className="flex justify-between items-end mb-6">
-            <h3 className="font-black text-2xl text-slate-900 tracking-tight">Recent Tasks</h3>
-            <button onClick={() => handleNavigation('explore')} className="text-blue-600 font-bold text-sm hover:underline">View all</button>
+            <h3 className="font-black text-2xl text-slate-900 tracking-tight">My Recent Tasks</h3>
+            <button onClick={() => { setActivityTab('pending'); handleNavigation('activity'); }} className="text-blue-600 font-bold text-sm hover:underline">View all</button>
           </div>
           <div className="space-y-4">
-            {tasks.filter(t => t.status === 'available').slice(0, 3).map(task => (
-              <div key={task.id} onClick={() => { setActiveTask(task); handleNavigation('task_detail'); }} className="bg-white p-5 rounded-[2rem] shadow-sm hover:shadow-md border border-slate-100 flex gap-5 cursor-pointer transition-all">
+            {tasks.filter(t => t.requesterId === (user?.uid || 'guest-123')).slice(0, 3).map(task => (
+              <div key={task.id} onClick={() => { 
+                setActiveTask(task); 
+                setTaskDetailContext('user');
+                handleNavigation('task_detail'); 
+              }} className="bg-white p-5 rounded-[2rem] shadow-sm hover:shadow-md border border-slate-100 flex gap-5 cursor-pointer transition-all">
                 <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl h-fit">
                   <MapPin size={24} className="text-blue-600" />
                 </div>
@@ -789,13 +1041,13 @@ export default function App() {
                     <h4 className="font-black text-lg text-slate-800 leading-tight">{task.title}</h4>
                     <span className="text-sm font-black text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl ml-3 whitespace-nowrap">Rp {task.budget.toLocaleString('id-ID')}</span>
                   </div>
-                  <p className="text-sm text-slate-500 font-medium">{task.requesterName} • {task.category}</p>
+                  <p className="text-sm text-slate-500 font-medium">{task.category} • <span className={`font-bold ${task.status === 'pending' ? 'text-amber-600' : task.status === 'ongoing' ? 'text-blue-600' : 'text-emerald-600'}`}>{task.status}</span></p>
                 </div>
               </div>
             ))}
-            {tasks.filter(t => t.status === 'available').length === 0 && (
+            {tasks.filter(t => t.requesterId === (user?.uid || 'guest-123')).length === 0 && (
               <div className="text-center p-10 bg-slate-50 border border-slate-100 rounded-[2rem] text-slate-500 font-bold">
-                No active tasks nearby.
+                Belum ada task yang di-post. Klik "Post Task" untuk mulai!
               </div>
             )}
           </div>
@@ -811,12 +1063,17 @@ export default function App() {
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-4">
               <button onClick={() => handleNavigation('home')} className="bg-slate-50 p-2 rounded-xl text-slate-600 md:hidden"><ArrowLeft size={24} /></button>
-              <h2 className="font-black text-2xl md:text-3xl text-slate-800 tracking-tight">Explore Tasks</h2>
+              <h2 className="font-black text-2xl md:text-3xl text-slate-800 tracking-tight">Find Helper</h2>
             </div>
             <button onClick={() => setShowNotif(!showNotif)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-full relative">
               <Bell size={24}/>
               <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 mb-5 flex items-center gap-3">
+            <div className="bg-blue-600 p-1.5 rounded-lg text-white"><Search size={14}/></div>
+            <p className="text-xs font-bold text-blue-700">Temukan Helper yang tersedia untuk mengerjakan tugas serupa dengan milikmu</p>
           </div>
 
           <div className="relative mb-5">
@@ -850,7 +1107,11 @@ export default function App() {
 
         <div className="p-6 md:p-8 space-y-5 bg-slate-50 min-h-full">
           {filteredExploreTasks.map(task => (
-            <div key={task.id} onClick={() => { setActiveTask(task); handleNavigation('task_detail'); }} className="bg-white p-6 rounded-[2rem] shadow-sm hover:shadow-md border border-slate-100 cursor-pointer transition-all hover:-translate-y-1">
+            <div key={task.id} onClick={() => { 
+              setActiveTask(task); 
+              setTaskDetailContext('explore');
+              handleNavigation('task_detail'); 
+            }} className="bg-white p-6 rounded-[2rem] shadow-sm hover:shadow-md border border-slate-100 cursor-pointer transition-all hover:-translate-y-1">
               <div className="flex justify-between items-center mb-5">
                 <div className="flex items-center gap-3">
                   <div className="bg-blue-100 w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black text-blue-700">
@@ -886,10 +1147,19 @@ export default function App() {
     );
   }
 
-  // POST TASKS WORKSPACE (DI SINI INPUT SEKARANG NORMAL DAN TIDAK BUG LAGI)
+  // Map Location Picker
   if (currentView === 'post_task') {
     return (
       <DashboardLayout {...dashboardProps}>
+        {/* Map picker overlay - fullscreen */}
+        {showMapPicker && (
+          <MapLocationPicker
+            value={taskForm.location}
+            onChange={(addr) => setTaskForm({ ...taskForm, location: addr })}
+            onClose={() => setShowMapPicker(false)}
+          />
+        )}
+
         <HeaderWithBack title="Post New Task" onBack={()=>handleNavigation('home')}/>
         <div className="p-6 md:p-10 max-w-2xl mx-auto">
           <form onSubmit={handlePostTask} className="space-y-6">
@@ -919,6 +1189,51 @@ export default function App() {
                   </select>
                 </div>
               </div>
+
+              {/* Map Location Picker Field */}
+              <div className="space-y-2">
+                <label className="text-sm font-black text-slate-700 ml-1">Lokasi Penjemputan / Pengantaran</label>
+                
+                {/* Map preview button */}
+                <button
+                  type="button"
+                  onClick={() => setShowMapPicker(true)}
+                  className="w-full border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 hover:border-blue-500 rounded-2xl px-5 py-4 flex items-center gap-3 transition-all group"
+                >
+                  <div className="bg-blue-600 p-2 rounded-xl text-white group-hover:scale-110 transition-transform shrink-0">
+                    <MapPin size={20} />
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    {taskForm.location ? (
+                      <>
+                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-0.5">Lokasi Dipilih</p>
+                        <p className="text-sm font-bold text-slate-700 truncate leading-snug">{taskForm.location}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-black text-blue-600">Pilih Lokasi di Peta</p>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">Tap untuk membuka peta interaktif</p>
+                      </>
+                    )}
+                  </div>
+                  {taskForm.location && (
+                    <div className="bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded-lg shrink-0">Ubah</div>
+                  )}
+                </button>
+
+                {/* Manual input fallback */}
+                <div className="relative">
+                  <input 
+                    value={taskForm.location} 
+                    onChange={(e)=>setTaskForm({...taskForm, location: e.target.value})} 
+                    placeholder="Atau ketik alamat manual di sini..." 
+                    className="w-full bg-slate-50 border-2 border-transparent rounded-2xl pl-5 pr-6 py-3.5 focus:ring-0 focus:border-blue-500 focus:bg-white outline-none transition font-medium text-slate-700 text-sm" 
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 font-bold ml-1 flex items-center gap-1">
+                  <Navigation size={11}/> Gunakan peta untuk akurasi lokasi yang lebih baik
+                </p>
+              </div>
             </div>
             <button type="submit" className="w-full bg-blue-600 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] transition text-lg">
               Publish Task
@@ -930,17 +1245,32 @@ export default function App() {
   }
 
   if (currentView === 'task_detail' && activeTask) {
+    const isOwnTask = activeTask.requesterId === (user?.uid || 'guest-123');
+    const isFromDashboard = taskDetailContext === 'user';
+
     return (
       <DashboardLayout {...dashboardProps}>
-        <HeaderWithBack title="Task Details" onBack={()=>handleNavigation('explore')}/>
-        <div className="p-6 md:p-10 max-w-2xl mx-auto">
-          <div className="bg-blue-50 text-blue-700 text-xs px-3 py-1.5 rounded-lg font-black uppercase tracking-wider inline-block mb-4">
-            {activeTask.category}
+        <HeaderWithBack title={isOwnTask ? "Detail Pesanan" : "Task Details"} onBack={()=>handleNavigation(isFromDashboard ? 'home' : 'explore')}/>
+        <div className="p-6 md:p-10 max-w-2xl mx-auto pb-32">
+          
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-blue-50 text-blue-700 text-xs px-3 py-1.5 rounded-lg font-black uppercase tracking-wider">
+              {activeTask.category}
+            </div>
+            {isOwnTask && (
+              <div className={`text-xs px-3 py-1.5 rounded-lg font-black uppercase tracking-wider ${
+                activeTask.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                activeTask.status === 'ongoing' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+              }`}>
+                {activeTask.status === 'pending' ? 'Menunggu Helper' : activeTask.status === 'ongoing' ? 'Sedang Dikerjakan' : 'Selesai'}
+              </div>
+            )}
           </div>
+
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight mb-4 tracking-tight">{activeTask.title}</h1>
           <p className="text-slate-600 text-base md:text-lg mb-8 font-medium leading-relaxed">{activeTask.desc}</p>
 
-          <div className="bg-white border border-slate-100 shadow-xl shadow-slate-100/50 rounded-[2.5rem] p-6 md:p-8 mb-8">
+          <div className="bg-white border border-slate-100 shadow-xl shadow-slate-100/50 rounded-[2.5rem] p-6 md:p-8 mb-6">
             <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-50">
                <div className="bg-slate-100 w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black text-slate-700">
                   {activeTask.requesterName.charAt(0)}
@@ -950,26 +1280,112 @@ export default function App() {
                   <p className="font-black text-xl text-slate-800">{activeTask.requesterName}</p>
                 </div>
             </div>
-            <div className="flex justify-between items-center bg-slate-50 p-6 rounded-3xl">
-              <div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-slate-50 p-5 rounded-3xl">
                 <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-1">Reward</p>
-                <p className="font-black text-3xl text-emerald-600 tracking-tight">Rp {activeTask.budget.toLocaleString('id-ID')}</p>
+                <p className="font-black text-2xl text-emerald-600 tracking-tight">Rp {activeTask.budget.toLocaleString('id-ID')}</p>
               </div>
-              <div className="text-right">
-                 <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-1">Location</p>
-                <p className="font-black text-slate-700 flex items-center gap-2 justify-end text-lg"><MapPin size={20} className="text-red-500"/> {activeTask.distance}</p>
+              <div className="bg-slate-50 p-5 rounded-3xl">
+                <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-2">Kategori</p>
+                <p className="font-black text-slate-700">{activeTask.category}</p>
               </div>
             </div>
+
+            <div className="bg-slate-50 p-5 rounded-3xl">
+              <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-2">Lokasi</p>
+              <div className="flex items-start gap-2">
+                <MapPin size={18} className="text-red-500 mt-0.5 shrink-0" />
+                <p className="font-black text-slate-700 leading-relaxed">{activeTask.location || activeTask.distance || 'Lokasi belum diset'}</p>
+              </div>
+              <a 
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeTask.location || activeTask.distance || '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 flex items-center gap-2 text-blue-600 text-xs font-black hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Navigation size={14}/> Buka di Google Maps
+              </a>
+            </div>
           </div>
+
+          {isOwnTask && (
+            <div className="bg-white border border-slate-100 shadow-sm rounded-[2rem] p-6 mb-6">
+              <h3 className="font-black text-slate-800 mb-4 flex items-center gap-2">
+                <FileText size={18} className="text-blue-600"/> Ringkasan Pesanan
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500 font-bold">Biaya Jasa</span>
+                  <span className="font-black text-slate-800">Rp {activeTask.budget.toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500 font-bold">Biaya Platform</span>
+                  <span className="font-black text-slate-800">Rp 2.000</span>
+                </div>
+                <div className="border-t border-slate-100 pt-3 flex justify-between">
+                  <span className="font-black text-slate-800">Total</span>
+                  <span className="font-black text-blue-700 text-lg">Rp {(activeTask.budget + 2000).toLocaleString('id-ID')}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isOwnTask && activeTask.status === 'ongoing' && activeTask.helperName && (
+            <div className="bg-emerald-50 border border-emerald-100 rounded-[2rem] p-6 mb-6">
+              <p className="text-xs text-emerald-600 font-black uppercase tracking-widest mb-2">Helper Kamu</p>
+              <div className="flex items-center gap-3">
+                <div className="bg-emerald-600 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-lg">
+                  {activeTask.helperName.charAt(0)}
+                </div>
+                <div>
+                  <p className="font-black text-slate-800">{activeTask.helperName}</p>
+                  <p className="text-xs text-emerald-600 font-bold">Sedang menuju lokasimu</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="fixed md:absolute bottom-0 w-full md:w-auto md:left-6 md:right-6 md:bottom-6 bg-white md:bg-transparent p-4 md:p-0 border-t border-slate-100 md:border-none shadow-[0_-10px_20px_rgba(0,0,0,0.05)] md:shadow-none z-20">
-          <button 
-            onClick={() => handleTakeTask(activeTask)}
-            className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] transition text-lg"
-          >
-            Accept This Task
-          </button>
+          {isOwnTask ? (
+            <div className="flex gap-3">
+              {activeTask.status === 'ongoing' && (
+                <button 
+                  onClick={() => handleNavigation('chat_list')}
+                  className="flex-1 bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 transition text-base flex items-center justify-center gap-2"
+                >
+                  <MessageCircle size={20}/> Chat Helper
+                </button>
+              )}
+              {activeTask.status === 'pending' && (
+                <button 
+                  onClick={() => handleCancelTask(activeTask.id)}
+                  className="flex-1 bg-red-50 text-red-600 border-2 border-red-100 font-black py-5 rounded-2xl hover:bg-red-100 transition text-base flex items-center justify-center gap-2"
+                >
+                  <XCircle size={20}/> Batalkan Pesanan
+                </button>
+              )}
+              {activeTask.status === 'history' && (
+                <button 
+                  onClick={() => handleNavigation('activity')}
+                  className="flex-1 bg-slate-100 text-slate-600 font-black py-5 rounded-2xl hover:bg-slate-200 transition text-base"
+                >
+                  Lihat Riwayat
+                </button>
+              )}
+            </div>
+          ) : (
+            !isOwnTask && (
+              <button 
+                onClick={() => handleTakeTask(activeTask)}
+                className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] transition text-lg"
+              >
+                Accept This Task
+              </button>
+            )
+          )}
         </div>
       </DashboardLayout>
     );
@@ -977,52 +1393,75 @@ export default function App() {
 
   if (currentView === 'activity') {
     const renderTasks = (statusFilter) => {
-      // FIX: Menghapus pengecekan if(!user) yang ketat untuk mengakomodir simulasi
       let filtered = tasks.filter(t => t.status === statusFilter);
       
       if (user) {
-         if (statusFilter === 'pending') {
-            filtered = filtered.filter(t => t.requesterId === user.uid);
-         } else if (statusFilter === 'ongoing' || statusFilter === 'history') {
-            filtered = filtered.filter(t => t.requesterId === user.uid || t.helperId === user.uid);
-         }
+        filtered = filtered.filter(t => t.requesterId === user.uid);
+      } else {
+        filtered = filtered.filter(t => t.requesterId === 'guest-123');
       }
 
       if (filtered.length === 0) {
         return (
           <div className="text-center text-slate-400 mt-20 flex flex-col items-center">
             <div className="bg-slate-100 p-6 rounded-full mb-6"><Clock size={48} className="text-slate-300" /></div>
-            <p className="font-bold text-lg">No activity found here.</p>
+            <p className="font-bold text-lg mb-2">
+              {statusFilter === 'pending' ? 'Belum ada pesanan yang menunggu.' :
+               statusFilter === 'ongoing' ? 'Tidak ada pesanan yang sedang berjalan.' :
+               'Belum ada riwayat pesanan.'}
+            </p>
+            {statusFilter === 'pending' && (
+              <button onClick={() => handleNavigation('post_task')} className="mt-4 bg-blue-600 text-white font-black px-6 py-3 rounded-xl shadow-md shadow-blue-200 hover:bg-blue-700 transition text-sm">
+                + Post Task Baru
+              </button>
+            )}
           </div>
         );
       }
 
       return filtered.map(task => (
-        <div key={task.id} className="bg-white p-6 rounded-[2rem] shadow-sm hover:shadow-md border border-slate-100 mb-5 transition-shadow">
+        <div key={task.id} 
+          onClick={() => { setActiveTask(task); setTaskDetailContext('user'); handleNavigation('task_detail'); }}
+          className="bg-white p-6 rounded-[2rem] shadow-sm hover:shadow-md border border-slate-100 mb-5 transition-all cursor-pointer hover:-translate-y-0.5"
+        >
           <div className="flex justify-between items-start mb-3">
             <h4 className="font-black text-lg text-slate-800 tracking-tight">{task.title}</h4>
             <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider ${
               task.status === 'pending' ? 'bg-amber-100 text-amber-700' :
               task.status === 'ongoing' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
             }`}>
-              {task.status}
+              {task.status === 'pending' ? 'Menunggu' : task.status === 'ongoing' ? 'Berjalan' : 'Selesai'}
             </span>
           </div>
-          <p className="text-sm text-slate-500 font-bold mb-5 flex items-center gap-2">
+          <p className="text-sm text-slate-500 font-bold mb-3 flex items-center gap-2">
             <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">Rp {task.budget.toLocaleString('id-ID')}</span> 
             <span>•</span> {task.category}
           </p>
+          <p className="text-xs text-slate-400 font-bold flex items-center gap-1 mb-4">
+            <MapPin size={12} className="text-red-400"/> {task.location || task.distance || 'Lokasi belum diset'}
+          </p>
           
           {task.status === 'ongoing' && (
-            <div className="flex flex-col sm:flex-row gap-3 mt-5 pt-5 border-t border-slate-50">
-              <button onClick={() => handleNavigation('chat')} className="flex-1 bg-blue-50 text-blue-700 text-sm font-black py-4 rounded-xl flex justify-center items-center gap-2 hover:bg-blue-100 transition">
-                <MessageCircle size={18} /> Chat {task.requesterId === user?.uid ? 'Helper' : 'Requester'}
+            <div className="flex flex-col sm:flex-row gap-3 mt-2 pt-5 border-t border-slate-50" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => handleNavigation('chat_list')} className="flex-1 bg-blue-50 text-blue-700 text-sm font-black py-4 rounded-xl flex justify-center items-center gap-2 hover:bg-blue-100 transition">
+                <MessageCircle size={18} /> Chat Helper
               </button>
-              {(task.helperId === user?.uid || !user) && (
-                <button onClick={() => handleFinishTask(task.id)} className="flex-1 bg-slate-900 text-white text-sm font-black py-4 rounded-xl flex justify-center items-center gap-2 hover:bg-slate-800 transition shadow-lg">
-                  <CheckCircle size={18} /> Mark as Done
-                </button>
-              )}
+            </div>
+          )}
+          {task.status === 'pending' && (
+            <div className="flex gap-3 mt-2 pt-4 border-t border-slate-50" onClick={(e) => e.stopPropagation()}>
+              <button 
+                onClick={() => handleCancelTask(task.id)}
+                className="flex-1 bg-red-50 text-red-600 text-sm font-black py-3 rounded-xl flex justify-center items-center gap-2 hover:bg-red-100 transition border border-red-100"
+              >
+                <XCircle size={16} /> Batalkan
+              </button>
+              <button 
+                onClick={() => { setActiveTask(task); setTaskDetailContext('user'); handleNavigation('task_detail'); }}
+                className="flex-1 bg-slate-50 text-slate-700 text-sm font-black py-3 rounded-xl flex justify-center items-center gap-2 hover:bg-slate-100 transition border border-slate-200"
+              >
+                <FileText size={16} /> Detail
+              </button>
             </div>
           )}
         </div>
@@ -1045,7 +1484,7 @@ export default function App() {
                 onClick={() => setActivityTab(tab)}
                 className={`flex-1 text-sm font-black py-3 rounded-xl capitalize transition-all ${activityTab === tab ? 'bg-white shadow-md text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
               >
-                {tab}
+                {tab === 'pending' ? 'Menunggu' : tab === 'ongoing' ? 'Berjalan' : 'Riwayat'}
               </button>
             ))}
           </div>
@@ -1057,55 +1496,200 @@ export default function App() {
     );
   }
 
-  if (currentView === 'chat') {
+  // CHAT LIST VIEW — WhatsApp-style conversation list
+  if (currentView === 'chat_list') {
+    const totalUnread = chatConversations.reduce((sum, c) => sum + c.unread, 0);
+
     return (
       <DashboardLayout {...dashboardProps}>
-        <div className="bg-white p-6 sticky top-0 z-10 flex items-center justify-between shadow-sm border-b border-slate-100">
-          <div className="flex items-center gap-4">
-            <button onClick={() => handleNavigation('activity')} className="bg-slate-50 p-2 rounded-xl text-slate-600 md:hidden"><ArrowLeft size={20} /></button>
-            <div className="bg-blue-100 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl text-blue-700">A</div>
-            <div>
-              <h2 className="font-black text-lg text-slate-900 leading-none mb-1">Alex (Helper)</h2>
-              <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> Online</span>
+        {/* Header */}
+        <div className="bg-white p-6 sticky top-0 z-10 shadow-sm border-b border-slate-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button onClick={() => handleNavigation('home')} className="bg-slate-50 p-2 rounded-xl text-slate-600 md:hidden"><ArrowLeft size={24} /></button>
+              <div>
+                <h2 className="font-black text-2xl md:text-3xl text-slate-800 tracking-tight">Messages</h2>
+                {totalUnread > 0 && (
+                  <p className="text-xs font-bold text-blue-600 mt-0.5">{totalUnread} pesan belum dibaca</p>
+                )}
+              </div>
             </div>
+            <button onClick={() => setShowNotif(!showNotif)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-full relative">
+              <Bell size={24}/>
+              {totalUnread > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+            </button>
+          </div>
+
+          {/* Search bar */}
+          <div className="relative mt-5">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              placeholder="Cari percakapan..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-sm font-bold text-slate-700 focus:border-blue-500 focus:bg-white outline-none transition"
+            />
           </div>
         </div>
 
-        <div className="p-6 space-y-6 bg-slate-50 flex-1 flex flex-col min-h-[calc(100vh-200px)] justify-end">
-           <div className="text-center my-4"><span className="bg-slate-200/50 text-slate-400 text-xs font-bold px-3 py-1 rounded-lg">Today</span></div>
-           <div className={`flex justify-start`}>
-              <div className={`max-w-[80%] p-4 rounded-2xl bg-white text-slate-800 rounded-bl-none shadow-sm border border-slate-100`}>
-                <p className="text-sm font-medium leading-relaxed">Hi, I'm heading to the location now. Can you confirm the details?</p>
-                <p className={`text-[10px] mt-2 text-right text-slate-400 font-bold`}>10:00 AM</p>
+        {/* Conversation List */}
+        <div className="bg-white divide-y divide-slate-50 min-h-full">
+          {chatConversations.map((convo) => (
+            <div
+              key={convo.id}
+              onClick={() => {
+                setActiveChatContact(convo);
+                handleNavigation('chat');
+              }}
+              className="flex items-center gap-4 p-5 md:p-6 cursor-pointer hover:bg-slate-50 transition-colors active:bg-blue-50"
+            >
+              {/* Avatar */}
+              <div className="relative shrink-0">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black text-white shadow-md ${
+                  convo.id === 1 ? 'bg-blue-600' : convo.id === 2 ? 'bg-emerald-600' : 'bg-purple-600'
+                }`}>
+                  {convo.avatar}
+                </div>
+                {convo.online && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white"></div>
+                )}
               </div>
-            </div>
-            <div className={`flex justify-end`}>
-              <div className={`max-w-[80%] p-4 rounded-2xl bg-blue-600 text-white rounded-br-none shadow-md shadow-blue-200`}>
-                <p className="text-sm font-medium leading-relaxed">Yes, everything is as described in the task!</p>
-                <p className={`text-[10px] mt-2 text-right text-blue-200 font-bold`}>10:02 AM</p>
-              </div>
-            </div>
-        </div>
 
-        <div className="bg-white p-4 md:p-6 border-t border-slate-100 flex gap-3 sticky bottom-16 md:bottom-0">
-          <input 
-            type="text" 
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Type your message..." 
-            className="flex-1 bg-slate-50 border-2 border-transparent rounded-2xl px-6 py-4 text-sm font-medium outline-none focus:bg-white focus:border-blue-500 transition"
-          />
-          <button className="bg-blue-600 w-14 h-14 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-200 hover:bg-blue-700 hover:scale-105 transition-all">
-            <Send size={20} className="ml-1" />
-          </button>
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start mb-1">
+                  <h4 className="font-black text-slate-800 text-base truncate">{convo.name}</h4>
+                  <span className={`text-[11px] font-bold shrink-0 ml-2 ${convo.unread > 0 ? 'text-blue-600' : 'text-slate-400'}`}>
+                    {convo.time}
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-blue-500 mb-1.5 truncate">📋 {convo.task}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm text-slate-500 font-medium truncate leading-snug">{convo.lastMessage}</p>
+                  {convo.unread > 0 && (
+                    <div className="bg-blue-600 text-white text-[11px] font-black w-5 h-5 rounded-full flex items-center justify-center shrink-0">
+                      {convo.unread}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <ChevronRight size={18} className="text-slate-300 shrink-0" />
+            </div>
+          ))}
+
+          {/* Empty state kalo gada chat */}
+          {chatConversations.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
+              <div className="bg-slate-100 p-8 rounded-3xl mb-6">
+                <MessageCircle size={48} className="text-slate-300" />
+              </div>
+              <h3 className="font-black text-slate-700 text-lg mb-2">Belum ada percakapan</h3>
+              <p className="text-slate-400 font-medium text-sm">Percakapan dengan Helper akan muncul di sini setelah task Anda diambil.</p>
+            </div>
+          )}
         </div>
       </DashboardLayout>
     );
   }
 
   // ============================================================================
-  // PROFILE & SUB-VIEWS
+  // CHAT ROOM VIEW — masuk setelah klik dari chat_list
   // ============================================================================
+  if (currentView === 'chat') {
+    const contact = activeChatContact || chatConversations[0];
+    const [localMessages, setLocalMessages] = useState(contact?.messages || []);
+
+    const handleSendMessage = () => {
+      if (!chatInput.trim()) return;
+      const newMsg = {
+        id: Date.now(),
+        from: 'user',
+        text: chatInput.trim(),
+        time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+      };
+      setLocalMessages(prev => [...prev, newMsg]);
+      setChatInput('');
+    };
+
+    return (
+      <DashboardLayout {...dashboardProps}>
+        {/* Chat Header */}
+        <div className="bg-white p-4 md:p-5 sticky top-0 z-10 flex items-center justify-between shadow-sm border-b border-slate-100">
+          <div className="flex items-center gap-4">
+            <button onClick={() => handleNavigation('chat_list')} className="bg-slate-50 p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition"><ArrowLeft size={20} /></button>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl text-white shadow-md ${
+              contact?.id === 1 ? 'bg-blue-600' : contact?.id === 2 ? 'bg-emerald-600' : 'bg-purple-600'
+            }`}>
+              {contact?.avatar || 'H'}
+            </div>
+            <div>
+              <h2 className="font-black text-lg text-slate-900 leading-none mb-1">{contact?.name || 'Helper'}</h2>
+              {contact?.online ? (
+                <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div> Online
+                </span>
+              ) : (
+                <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Offline</span>
+              )}
+            </div>
+          </div>
+          {contact?.task && (
+            <div className="bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl hidden sm:block">
+              <p className="text-[10px] font-black text-blue-600 uppercase tracking-wider truncate max-w-[150px]">📋 {contact.task}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Messages */}
+        <div className="p-5 md:p-6 space-y-4 bg-slate-50 flex-1 min-h-[calc(100vh-280px)]">
+          <div className="text-center my-2">
+            <span className="bg-slate-200/70 text-slate-400 text-xs font-bold px-3 py-1 rounded-lg">Today</span>
+          </div>
+          {localMessages.map((msg) => (
+            <div key={msg.id} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {msg.from === 'helper' && (
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm text-white mr-2 shrink-0 mt-1 ${
+                  contact?.id === 1 ? 'bg-blue-600' : contact?.id === 2 ? 'bg-emerald-600' : 'bg-purple-600'
+                }`}>
+                  {contact?.avatar || 'H'}
+                </div>
+              )}
+              <div className={`max-w-[75%] p-4 rounded-2xl shadow-sm ${
+                msg.from === 'user' 
+                  ? 'bg-blue-600 text-white rounded-br-none shadow-blue-200' 
+                  : 'bg-white text-slate-800 rounded-bl-none border border-slate-100'
+              }`}>
+                <p className="text-sm font-medium leading-relaxed">{msg.text}</p>
+                <p className={`text-[10px] mt-1.5 text-right font-bold ${msg.from === 'user' ? 'text-blue-200' : 'text-slate-400'}`}>
+                  {msg.time}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Message Input */}
+        <div className="bg-white p-4 md:p-5 border-t border-slate-100 flex gap-3 sticky bottom-16 md:bottom-0 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+          <input 
+            type="text" 
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="Ketik pesan..." 
+            className="flex-1 bg-slate-50 border-2 border-transparent rounded-2xl px-5 py-3.5 text-sm font-medium outline-none focus:bg-white focus:border-blue-500 transition"
+          />
+          <button 
+            onClick={handleSendMessage}
+            className="bg-blue-600 w-13 h-13 min-w-[52px] min-h-[52px] rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-200 hover:bg-blue-700 hover:scale-105 transition-all"
+          >
+            <Send size={20} className="ml-0.5" />
+          </button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // PROFILE & SUB-VIEWS 
 
   if (currentView === 'profile') {
     return (
@@ -1186,7 +1770,6 @@ export default function App() {
     );
   }
 
-  // --- FIX: EDIT PROFILE FUNCTIONAL ---
   if (currentView === 'edit_profile') {
     return (
       <DashboardLayout {...dashboardProps}>
@@ -1233,7 +1816,6 @@ export default function App() {
     );
   }
 
-  // --- FIX: ADDRESS LIST FUNCTIONAL ---
   if (currentView === 'address_list') {
     return (
       <DashboardLayout {...dashboardProps}>
@@ -1259,7 +1841,6 @@ export default function App() {
     );
   }
 
-  // --- FIX: TAMBAH ALAMAT BARU ---
   if (currentView === 'add_address') {
     return (
       <DashboardLayout {...dashboardProps}>
@@ -1297,7 +1878,6 @@ export default function App() {
     );
   }
 
-  // --- FIX: TOP UP HELP PAY ---
   if (currentView === 'top_up') {
     return (
       <DashboardLayout {...dashboardProps}>
@@ -1358,7 +1938,6 @@ export default function App() {
     );
   }
 
-  // SUB VIEWS LAINNYA
   if (currentView === 'security') {
     return (
       <DashboardLayout {...dashboardProps}>
