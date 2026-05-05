@@ -34,11 +34,11 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [mapReady, setMapReady] = useState(false);
 
-  // Default center: Jakarta, Indonesia
+  // default: jakarta, indonesia
   const defaultCenter = [-6.2088, 106.8456];
 
   useEffect(() => {
-    // Load Leaflet CSS
+    // load Leaflet CSS
     if (!document.getElementById('leaflet-css')) {
       const link = document.createElement('link');
       link.id = 'leaflet-css';
@@ -47,7 +47,7 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
       document.head.appendChild(link);
     }
 
-    // Load Leaflet JS
+    // load Leaflet JS
     const loadLeaflet = () => {
       if (window.L) {
         initMap();
@@ -64,7 +64,7 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
 
       const L = window.L;
 
-      // Fix default icon paths for Leaflet
+      //default icon paths
       delete L.Icon.Default.prototype._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -83,7 +83,7 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
         maxZoom: 19,
       }).addTo(map);
 
-      // Custom blue marker
+      //blue maker
       const blueIcon = L.divIcon({
         className: '',
         html: `<div style="
@@ -101,19 +101,18 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
       const marker = L.marker(defaultCenter, { draggable: true, icon: blueIcon }).addTo(map);
       markerRef.current = marker;
 
-      // Reverse geocode on marker drag end
       marker.on('dragend', async () => {
         const pos = marker.getLatLng();
         await reverseGeocode(pos.lat, pos.lng);
       });
 
-      // Click on map to move marker
+      // click on map to move 
       map.on('click', async (e) => {
         marker.setLatLng(e.latlng);
         await reverseGeocode(e.latlng.lat, e.latlng.lng);
       });
 
-      // Try to get user's current location
+      // try to get user current location
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
@@ -123,7 +122,7 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
             await reverseGeocode(latitude, longitude);
           },
           () => {
-            // fallback: just use Jakarta
+            // fallback: just use jkarta
             reverseGeocode(defaultCenter[0], defaultCenter[1]);
           },
           { timeout: 5000 }
@@ -170,7 +169,7 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col bg-white">
-      {/* Header */}
+      {/* header */}
       <div className="flex items-center gap-4 p-4 bg-white border-b border-slate-100 shadow-sm z-10">
         <button onClick={onClose} className="bg-slate-100 p-2 rounded-xl text-slate-600 hover:bg-slate-200 transition">
           <X size={22} />
@@ -181,11 +180,11 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
         </div>
       </div>
 
-      {/* Map */}
+      {/* map */}
       <div className="flex-1 relative">
         <div ref={mapRef} className="w-full h-full" style={{ minHeight: '60vh' }} />
 
-        {/* Center pin hint */}
+        {/* cnter pin hint */}
         {!mapReady && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
             <div className="flex flex-col items-center gap-3">
@@ -196,7 +195,7 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
         )}
       </div>
 
-      {/* Address Result + Confirm */}
+      {/* address result + confirm */}
       <div className="bg-white border-t border-slate-100 p-4 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
         <div className="flex items-start gap-3 bg-slate-50 rounded-2xl p-4 mb-4 border border-slate-200">
           <MapPin size={20} className="text-red-500 shrink-0 mt-0.5" />
@@ -348,7 +347,7 @@ export default function App() {
   const [chatInput, setChatInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Map Location Picker State
+  // map loc picker state
   const [showMapPicker, setShowMapPicker] = useState(false);
 
   // NEW FEATURES STATES
@@ -357,10 +356,10 @@ export default function App() {
   const [sortBy, setSortBy] = useState('nearest');
   const [showNotif, setShowNotif] = useState(false);
 
-  // Active chat contact state
+  // active chat contact state
   const [activeChatContact, setActiveChatContact] = useState(null);
 
-  // States for Edit Profile & Addresses & Topup
+  // states edit profile, addresses & topup
   const [editProfileData, setEditProfileData] = useState({ name: '', phone: '' });
   const [addresses, setAddresses] = useState([
     { id: 1, label: 'Rumah', type: 'Utama', detail: 'Jl. Sukamaju No. 123, RT 01/RW 02, Kec. Bandung Wetan, Kota Bandung, Jawa Barat 40115', contact: 'Budi Santoso | 081234567890' }
@@ -370,7 +369,7 @@ export default function App() {
   const [topupAmount, setTopupAmount] = useState('');
   const [topupMethod, setTopupMethod] = useState('');
 
-  // Mock chat conversations list (WhatsApp-style)
+  // mock chat conversations list 
   const [chatConversations] = useState([
     {
       id: 1,
@@ -417,7 +416,7 @@ export default function App() {
     },
   ]);
 
-  // Mock data
+  // mock data
   const [notifications] = useState([
     { id: 1, title: 'Tugas Diambil!', desc: 'Tugas "Beli Kopi" telah diambil oleh Helper terdekat.', time: '10 menit yang lalu', unread: true },
     { id: 2, title: 'Dana Masuk', desc: 'Top-up saldo sebesar Rp 150.000 berhasil.', time: '1 jam yang lalu', unread: true },
@@ -435,7 +434,7 @@ export default function App() {
     { id: 2, user: 'Siti Aminah', rating: 5, comment: 'Helper sangat sopan dan amanah. Sangat merekomendasikan.', date: '05 Mei 2026' }
   ]);
 
-  // Filter explore tasks
+  // filter explore tasks
   let filteredExploreTasks = tasks.filter(t => t.status === 'available');
   filteredExploreTasks = filteredExploreTasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) || task.desc.toLowerCase().includes(searchQuery.toLowerCase());
@@ -1147,11 +1146,11 @@ export default function App() {
     );
   }
 
-  // Map Location Picker
+  // map loc pick
   if (currentView === 'post_task') {
     return (
       <DashboardLayout {...dashboardProps}>
-        {/* Map picker overlay - fullscreen */}
+        {/* map picker overlay, fullscreen */}
         {showMapPicker && (
           <MapLocationPicker
             value={taskForm.location}
@@ -1190,11 +1189,11 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Map Location Picker Field */}
+              {/* map loc picker field */}
               <div className="space-y-2">
                 <label className="text-sm font-black text-slate-700 ml-1">Lokasi Penjemputan / Pengantaran</label>
                 
-                {/* Map preview button */}
+                {/* map preview button */}
                 <button
                   type="button"
                   onClick={() => setShowMapPicker(true)}
@@ -1221,7 +1220,7 @@ export default function App() {
                   )}
                 </button>
 
-                {/* Manual input fallback */}
+                {/* manual input fallback */}
                 <div className="relative">
                   <input 
                     value={taskForm.location} 
@@ -1496,7 +1495,7 @@ export default function App() {
     );
   }
 
-  // CHAT LIST VIEW — WhatsApp-style conversation list
+  // CHAT LIST VIEW 
   if (currentView === 'chat_list') {
     const totalUnread = chatConversations.reduce((sum, c) => sum + c.unread, 0);
 
@@ -1592,9 +1591,7 @@ export default function App() {
     );
   }
 
-  // ============================================================================
-  // CHAT ROOM VIEW — masuk setelah klik dari chat_list
-  // ============================================================================
+  // CHAT ROOM VIEW 
   if (currentView === 'chat') {
     const contact = activeChatContact || chatConversations[0];
     const [localMessages, setLocalMessages] = useState(contact?.messages || []);
@@ -1613,7 +1610,7 @@ export default function App() {
 
     return (
       <DashboardLayout {...dashboardProps}>
-        {/* Chat Header */}
+        {/* cht header */}
         <div className="bg-white p-4 md:p-5 sticky top-0 z-10 flex items-center justify-between shadow-sm border-b border-slate-100">
           <div className="flex items-center gap-4">
             <button onClick={() => handleNavigation('chat_list')} className="bg-slate-50 p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition"><ArrowLeft size={20} /></button>
