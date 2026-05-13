@@ -4,7 +4,7 @@ import {
   Home, Clock, MessageCircle, User, PlusCircle, Search, ChevronRight, Star, 
   MapPin, Wallet, ArrowLeft, Send, CheckCircle, LogOut, 
   Settings, Bell, HelpCircle, History, Lock, Shield, Info, X, Filter, Navigation,
-  CreditCard, Smartphone, Building, FileText, XCircle
+  CreditCard, Smartphone, Building, FileText, XCircle, Briefcase, List, DollarSign, Power, CheckSquare, TrendingUp, Camera, Upload, Trash2, CheckCircle2
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
@@ -34,11 +34,11 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [mapReady, setMapReady] = useState(false);
 
-  // default: jakarta, indonesia
-  const defaultCenter = [-6.2088, 106.8456];
+  // Default center: Jakarta, Indonesia
+  const defaultCenter =[-6.2088, 106.8456];
 
   useEffect(() => {
-    // load Leaflet CSS
+    // Load Leaflet CSS
     if (!document.getElementById('leaflet-css')) {
       const link = document.createElement('link');
       link.id = 'leaflet-css';
@@ -47,7 +47,7 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
       document.head.appendChild(link);
     }
 
-    // load Leaflet JS
+    // Load Leaflet JS
     const loadLeaflet = () => {
       if (window.L) {
         initMap();
@@ -64,7 +64,7 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
 
       const L = window.L;
 
-      //default icon paths
+      // Fix default icon paths for Leaflet
       delete L.Icon.Default.prototype._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -83,7 +83,7 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
         maxZoom: 19,
       }).addTo(map);
 
-      //blue maker
+      // Custom blue marker
       const blueIcon = L.divIcon({
         className: '',
         html: `<div style="
@@ -95,24 +95,25 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
           box-shadow: 0 4px 14px rgba(37,99,235,0.5);
         "></div>`,
         iconSize: [36, 36],
-        iconAnchor: [18, 36],
+        iconAnchor:[18, 36],
       });
 
       const marker = L.marker(defaultCenter, { draggable: true, icon: blueIcon }).addTo(map);
       markerRef.current = marker;
 
+      // Reverse geocode on marker drag end
       marker.on('dragend', async () => {
         const pos = marker.getLatLng();
         await reverseGeocode(pos.lat, pos.lng);
       });
 
-      // click on map to move 
+      // Click on map to move marker
       map.on('click', async (e) => {
         marker.setLatLng(e.latlng);
         await reverseGeocode(e.latlng.lat, e.latlng.lng);
       });
 
-      // try to get user current location
+      // Try to get user's current location
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
@@ -122,7 +123,7 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
             await reverseGeocode(latitude, longitude);
           },
           () => {
-            // fallback: just use jkarta
+            // fallback: just use Jakarta
             reverseGeocode(defaultCenter[0], defaultCenter[1]);
           },
           { timeout: 5000 }
@@ -143,7 +144,7 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
         mapInstanceRef.current = null;
       }
     };
-  }, []);
+  },[]);
 
   const reverseGeocode = async (lat, lng) => {
     setLoading(true);
@@ -169,7 +170,6 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col bg-white">
-      {/* header */}
       <div className="flex items-center gap-4 p-4 bg-white border-b border-slate-100 shadow-sm z-10">
         <button onClick={onClose} className="bg-slate-100 p-2 rounded-xl text-slate-600 hover:bg-slate-200 transition">
           <X size={22} />
@@ -180,11 +180,8 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
         </div>
       </div>
 
-      {/* map */}
       <div className="flex-1 relative">
         <div ref={mapRef} className="w-full h-full" style={{ minHeight: '60vh' }} />
-
-        {/* cnter pin hint */}
         {!mapReady && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
             <div className="flex flex-col items-center gap-3">
@@ -195,7 +192,6 @@ const MapLocationPicker = ({ value, onChange, onClose }) => {
         )}
       </div>
 
-      {/* address result + confirm */}
       <div className="bg-white border-t border-slate-100 p-4 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
         <div className="flex items-start gap-3 bg-slate-50 rounded-2xl p-4 mb-4 border border-slate-200">
           <MapPin size={20} className="text-red-500 shrink-0 mt-0.5" />
@@ -236,15 +232,15 @@ const HeaderWithBack = ({ title, onBack }) => (
   </div>
 );
 
-const SidebarItem = ({ icon, label, active, onClick }) => (
-  <div onClick={onClick} className={`flex items-center gap-4 px-4 py-3 rounded-2xl cursor-pointer transition-all font-bold ${active ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'}`}>
+const SidebarItem = ({ icon, label, active, onClick, isHelper }) => (
+  <div onClick={onClick} className={`flex items-center gap-4 px-4 py-3 rounded-2xl cursor-pointer transition-all font-bold ${active ? (isHelper ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/50' : 'bg-blue-600 text-white shadow-md shadow-blue-200') : (isHelper ? 'text-slate-400 hover:bg-slate-800 hover:text-emerald-400' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600')}`}>
     {icon} <span>{label}</span>
   </div>
 );
 
-const BottomNavItem = ({ icon, label, active, onClick }) => (
-  <div onClick={onClick} className={`flex flex-col items-center cursor-pointer transition-all ${active ? 'text-blue-600 scale-110' : 'text-slate-400 hover:text-slate-600'}`}>
-    <div className={`${active ? 'bg-blue-50 p-2 rounded-2xl' : 'p-2'}`}>{icon}</div>
+const BottomNavItem = ({ icon, label, active, onClick, isHelper }) => (
+  <div onClick={onClick} className={`flex flex-col items-center cursor-pointer transition-all ${active ? (isHelper ? 'text-emerald-500 scale-110' : 'text-blue-600 scale-110') : (isHelper ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')}`}>
+    <div className={`${active ? (isHelper ? 'bg-emerald-500/20 p-2 rounded-2xl' : 'bg-blue-50 p-2 rounded-2xl') : 'p-2'}`}>{icon}</div>
     <span className="text-[10px] font-bold mt-1">{label}</span>
   </div>
 );
@@ -259,50 +255,74 @@ const MenuRow = ({ icon, label, onClick, isRed }) => (
   </div>
 );
 
-const NotificationPanel = ({ showNotif, setShowNotif, notifications }) => (
-  showNotif && (
-    <div className="absolute top-24 md:top-20 right-6 md:right-10 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-[fadeIn_0.2s_ease-out]">
-      <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-        <h3 className="font-black text-slate-800">Notifikasi</h3>
-        <button onClick={()=>setShowNotif(false)} className="text-slate-400 hover:text-slate-600"><X size={18}/></button>
-      </div>
-      <div className="max-h-80 overflow-y-auto">
-        {notifications.map(n => (
-          <div key={n.id} className={`p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer ${n.unread ? 'bg-blue-50/50' : ''}`}>
-            <div className="flex justify-between items-start mb-1">
-               <h4 className="text-sm font-bold text-slate-800">{n.title}</h4>
-               {n.unread && <div className="w-2 h-2 bg-blue-600 rounded-full mt-1"></div>}
-            </div>
-            <p className="text-xs text-slate-500 mt-1 leading-relaxed">{n.desc}</p>
-            <span className="text-[10px] font-bold text-slate-400 mt-2 block">{n.time}</span>
-          </div>
-        ))}
-      </div>
-      <div className="p-3 text-center bg-slate-50 border-t border-slate-100 cursor-pointer hover:bg-slate-100 text-sm font-bold text-blue-600">
-        Tandai semua sudah dibaca
-      </div>
-    </div>
-  )
-);
+// Peningkatan pada NotificationPanel agar interaktif saat di-click (Realtime Expand & Mark Read)
+const NotificationPanel = ({ showNotif, setShowNotif, notifications, onMarkAllRead, onNotifClick }) => {
+  const [expandedId, setExpandedId] = useState(null);
 
-const DashboardLayout = ({ children, currentView, handleNavigation, showNotif, setShowNotif, notifications }) => (
+  return (
+    showNotif && (
+      <div className="absolute top-24 md:top-20 right-6 md:right-10 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+          <h3 className="font-black text-slate-800">Notifikasi</h3>
+          <button onClick={()=>setShowNotif(false)} className="text-slate-400 hover:text-slate-600"><X size={18}/></button>
+        </div>
+        <div className="max-h-80 overflow-y-auto">
+          {notifications.length === 0 ? (
+            <div className="p-6 text-center text-slate-400 font-bold text-sm">Belum ada notifikasi baru.</div>
+          ) : (
+            notifications.map(n => (
+              <div key={n.id} onClick={() => { 
+                setExpandedId(expandedId === n.id ? null : n.id); 
+                if(n.unread) onNotifClick(n.id); 
+              }} className={`p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-all ${n.unread ? 'bg-blue-50/50' : ''}`}>
+                <div className="flex justify-between items-start mb-1">
+                   <h4 className="text-sm font-bold text-slate-800">{n.title}</h4>
+                   {n.unread && <div className="w-2 h-2 bg-blue-600 rounded-full mt-1 shrink-0"></div>}
+                </div>
+                <p className={`text-xs text-slate-500 mt-1 leading-relaxed transition-all duration-300 ${expandedId === n.id ? '' : 'line-clamp-2'}`}>{n.desc}</p>
+                <span className="text-[10px] font-bold text-slate-400 mt-2 block">{n.time}</span>
+              </div>
+            ))
+          )}
+        </div>
+        <div onClick={onMarkAllRead} className="p-3 text-center bg-slate-50 border-t border-slate-100 cursor-pointer hover:bg-slate-100 text-sm font-bold text-blue-600">
+          Tandai semua sudah dibaca
+        </div>
+      </div>
+    )
+  );
+};
+
+const DashboardLayout = ({ children, currentView, handleNavigation, showNotif, setShowNotif, notifications, userRole, markAllReadNotifs, handleNotifClick }) => {
+  const isHelper = userRole === 'helper';
+  
+  return (
   <div className="flex h-screen bg-slate-50 font-sans">
     {/* Desktop Sidebar */}
-    <aside className="hidden md:flex flex-col w-72 bg-white border-r border-slate-100 h-full shadow-sm z-30">
+    <aside className={`hidden md:flex flex-col w-72 h-full shadow-sm z-30 transition-colors ${isHelper ? 'bg-slate-900 border-r border-slate-800 text-white' : 'bg-white border-r border-slate-100'}`}>
       <div className="p-8">
-        <div className="text-2xl font-black text-blue-700 tracking-tighter cursor-pointer" onClick={() => handleNavigation('home')}>HELPBLUE</div>
+        <div className={`text-2xl font-black tracking-tighter cursor-pointer ${isHelper ? 'text-white' : 'text-blue-700'}`} onClick={() => handleNavigation('home')}>HELPBLUE</div>
       </div>
       <nav className="flex-1 px-4 space-y-2 overflow-y-auto no-scrollbar">
-        <SidebarItem icon={<Home size={20} />} label="Dashboard" active={currentView === 'home'} onClick={() => handleNavigation('home')} />
-        <SidebarItem icon={<Clock size={20} />} label="My Activity" active={currentView === 'activity'} onClick={() => handleNavigation('activity')} />
-        <SidebarItem icon={<Search size={20} />} label="Find Helper" active={currentView === 'explore'} onClick={() => handleNavigation('explore')} />
-        <SidebarItem icon={<MessageCircle size={20} />} label="Messages" active={currentView === 'chat_list' || currentView === 'chat'} onClick={() => handleNavigation('chat_list')} />
-        <SidebarItem icon={<User size={20} />} label="Profile" active={currentView === 'profile'} onClick={() => handleNavigation('profile')} />
+        <SidebarItem isHelper={isHelper} icon={<Home size={20} />} label="Dashboard" active={currentView === 'home'} onClick={() => handleNavigation('home')} />
+        {isHelper ? (
+          <>
+            <SidebarItem isHelper={isHelper} icon={<List size={20} />} label="Order Feed" active={currentView === 'order_feed'} onClick={() => handleNavigation('order_feed')} />
+            <SidebarItem isHelper={isHelper} icon={<DollarSign size={20} />} label="Earnings" active={currentView === 'earnings'} onClick={() => handleNavigation('earnings')} />
+          </>
+        ) : (
+          <>
+            <SidebarItem isHelper={isHelper} icon={<Clock size={20} />} label="My Activity" active={currentView === 'activity'} onClick={() => handleNavigation('activity')} />
+            <SidebarItem isHelper={isHelper} icon={<Search size={20} />} label="Find Helper" active={currentView === 'explore'} onClick={() => handleNavigation('explore')} />
+          </>
+        )}
+        <SidebarItem isHelper={isHelper} icon={<MessageCircle size={20} />} label="Messages" active={currentView === 'chat_list' || currentView === 'chat'} onClick={() => handleNavigation('chat_list')} />
+        <SidebarItem isHelper={isHelper} icon={<User size={20} />} label="Profile" active={currentView === 'profile'} onClick={() => handleNavigation('profile')} />
         
-        <div className="pt-6 mt-6 border-t border-slate-100">
-           <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Shortcut</p>
-           <SidebarItem icon={<History size={20} />} label="Wallet History" active={currentView === 'wallet_history'} onClick={() => handleNavigation('wallet_history')} />
-           <SidebarItem icon={<HelpCircle size={20} />} label="Help Center" active={currentView === 'help_center'} onClick={() => handleNavigation('help_center')} />
+        <div className={`pt-6 mt-6 border-t ${isHelper ? 'border-slate-800' : 'border-slate-100'}`}>
+           <p className={`px-4 text-[10px] font-black uppercase tracking-widest mb-2 ${isHelper ? 'text-slate-500' : 'text-slate-400'}`}>Shortcut</p>
+           <SidebarItem isHelper={isHelper} icon={<History size={20} />} label="Wallet History" active={currentView === 'wallet_history'} onClick={() => handleNavigation('wallet_history')} />
+           <SidebarItem isHelper={isHelper} icon={<HelpCircle size={20} />} label="Help Center" active={currentView === 'help_center'} onClick={() => handleNavigation('help_center')} />
         </div>
       </nav>
     </aside>
@@ -312,116 +332,94 @@ const DashboardLayout = ({ children, currentView, handleNavigation, showNotif, s
       <div className="flex-1 overflow-y-auto pb-20 md:pb-0 relative">
         <div className="max-w-3xl mx-auto w-full h-full relative">
            {children}
-           <NotificationPanel showNotif={showNotif} setShowNotif={setShowNotif} notifications={notifications} />
+           <NotificationPanel showNotif={showNotif} setShowNotif={setShowNotif} notifications={notifications} onMarkAllRead={markAllReadNotifs} onNotifClick={handleNotifClick} />
         </div>
       </div>
 
       {/* MOB BOTTOM NAV */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-100 flex justify-around p-2 pb-4 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-3xl">
-        <BottomNavItem icon={<Home size={22} />} label="Home" active={currentView === 'home'} onClick={() => handleNavigation('home')} />
-        <BottomNavItem icon={<Clock size={22} />} label="Activity" active={currentView === 'activity'} onClick={() => handleNavigation('activity')} />
-        <BottomNavItem icon={<MessageCircle size={22} />} label="Chat" active={currentView === 'chat_list' || currentView === 'chat'} onClick={() => handleNavigation('chat_list')} />
-        <BottomNavItem icon={<User size={22} />} label="Profile" active={currentView === 'profile'} onClick={() => handleNavigation('profile')} />
+      <nav className={`md:hidden fixed bottom-0 w-full border-t flex justify-around p-2 pb-4 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-3xl transition-colors ${isHelper ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+        <BottomNavItem isHelper={isHelper} icon={<Home size={22} />} label="Home" active={currentView === 'home'} onClick={() => handleNavigation('home')} />
+        {isHelper ? (
+          <BottomNavItem isHelper={isHelper} icon={<List size={22} />} label="Orders" active={currentView === 'order_feed'} onClick={() => handleNavigation('order_feed')} />
+        ) : (
+          <BottomNavItem isHelper={isHelper} icon={<Clock size={22} />} label="Activity" active={currentView === 'activity'} onClick={() => handleNavigation('activity')} />
+        )}
+        <BottomNavItem isHelper={isHelper} icon={<MessageCircle size={22} />} label="Chat" active={currentView === 'chat_list' || currentView === 'chat'} onClick={() => handleNavigation('chat_list')} />
+        <BottomNavItem isHelper={isHelper} icon={<User size={22} />} label="Profile" active={currentView === 'profile'} onClick={() => handleNavigation('profile')} />
       </nav>
     </main>
   </div>
-);
+  );
+};
 
 
 // MAIN APP COMPONENT
 
 export default function App() {
   // STATE MANAGEMENT
-  const [currentView, setCurrentView] = useState('landing'); 
+  const[currentView, setCurrentView] = useState('landing'); 
   const [user, setUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
+  const[userProfile, setUserProfile] = useState(null);
   const [tasks, setTasks] = useState([]);
-  const [activityTab, setActivityTab] = useState('pending');
+  const [chats, setChats] = useState([]); // REAL-TIME CHAT STATE
+  const[activityTab, setActivityTab] = useState('pending');
   const [activeTask, setActiveTask] = useState(null);
   const [taskDetailContext, setTaskDetailContext] = useState('user');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const[isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Form States
-  const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '' });
+  const[formData, setFormData] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '' });
   const [taskForm, setTaskForm] = useState({ title: '', desc: '', budget: '', category: 'Cleaning', location: '' });
   const [chatInput, setChatInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // map loc picker state
-  const [showMapPicker, setShowMapPicker] = useState(false);
+  // Map Location Picker State
+  const[showMapPicker, setShowMapPicker] = useState(false);
 
   // NEW FEATURES STATES
-  const [searchQuery, setSearchQuery] = useState('');
+  const[searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('nearest');
-  const [showNotif, setShowNotif] = useState(false);
+  const[showNotif, setShowNotif] = useState(false);
 
-  // active chat contact state
+  // Role & Helper States
+  const [userRole, setUserRole] = useState('user'); 
+  const [isOnline, setIsOnline] = useState(false);
+
+  // Active chat contact state
   const [activeChatContact, setActiveChatContact] = useState(null);
 
-  // states edit profile, addresses & topup
-  const [editProfileData, setEditProfileData] = useState({ name: '', phone: '' });
-  const [addresses, setAddresses] = useState([
+  // Review states
+  const [ratingInput, setRatingInput] = useState(5);
+  const[reviewInput, setReviewInput] = useState('');
+
+  // States for Edit Profile & Addresses & Topup
+  const[editProfileData, setEditProfileData] = useState({ name: '', phone: '' });
+  const[addresses, setAddresses] = useState([
     { id: 1, label: 'Rumah', type: 'Utama', detail: 'Jl. Sukamaju No. 123, RT 01/RW 02, Kec. Bandung Wetan, Kota Bandung, Jawa Barat 40115', contact: 'Budi Santoso | 081234567890' }
   ]);
   const [newAddressData, setNewAddressData] = useState({ label: '', type: 'Lainnya', detail: '', contact: '' });
   
   const [topupAmount, setTopupAmount] = useState('');
-  const [topupMethod, setTopupMethod] = useState('');
+  const[topupMethod, setTopupMethod] = useState('');
 
-  // mock chat conversations list 
-  const [chatConversations] = useState([
-    {
-      id: 1,
-      name: 'Alex (Helper)',
-      avatar: 'A',
-      lastMessage: 'Yes, everything is as described in the task!',
-      time: '10:02 AM',
-      unread: 2,
-      online: true,
-      task: 'Beli Kopi Cafetaria',
-      messages: [
-        { id: 1, from: 'helper', text: "Hi, I'm heading to the location now. Can you confirm the details?", time: '10:00 AM' },
-        { id: 2, from: 'user', text: 'Yes, everything is as described in the task!', time: '10:02 AM' },
-      ]
-    },
-    {
-      id: 2,
-      name: 'Budi (Helper)',
-      avatar: 'B',
-      lastMessage: 'Tugas sudah selesai, terima kasih!',
-      time: 'Kemarin',
-      unread: 0,
-      online: false,
-      task: 'Print Makalah',
-      messages: [
-        { id: 1, from: 'helper', text: 'Halo, saya sudah ambil tugasnya ya.', time: '14:00' },
-        { id: 2, from: 'user', text: 'Oke, terima kasih banyak!', time: '14:05' },
-        { id: 3, from: 'helper', text: 'Tugas sudah selesai, terima kasih!', time: '14:30' },
-      ]
-    },
-    {
-      id: 3,
-      name: 'Siti (Helper)',
-      avatar: 'S',
-      lastMessage: 'Siap, saya dalam perjalanan ke lokasi.',
-      time: '09:45 AM',
-      unread: 1,
-      online: true,
-      task: 'Kebersihan Kamar Kost',
-      messages: [
-        { id: 1, from: 'user', text: 'Halo, kapan bisa mulai?', time: '09:40 AM' },
-        { id: 2, from: 'helper', text: 'Siap, saya dalam perjalanan ke lokasi.', time: '09:45 AM' },
-      ]
-    },
-  ]);
+  // WITHDRAW & HELPER SUB-MENU STATES
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawMethod, setWithdrawMethod] = useState('');
+  const [withdrawError, setWithdrawError] = useState('');
+  
+  const [newBankAccount, setNewBankAccount] = useState({ bankName: 'BCA', accountNumber: '', accountName: '' });
+  
+  // File Upload states for KTP & Selfie verifications
+  const ktpInputRef = useRef(null);
+  const selfieInputRef = useRef(null);
+  const [uploadingKTP, setUploadingKTP] = useState(false);
+  const [uploadingSelfie, setUploadingSelfie] = useState(false);
 
-  // mock data
-  const [notifications] = useState([
-    { id: 1, title: 'Tugas Diambil!', desc: 'Tugas "Beli Kopi" telah diambil oleh Helper terdekat.', time: '10 menit yang lalu', unread: true },
-    { id: 2, title: 'Dana Masuk', desc: 'Top-up saldo sebesar Rp 150.000 berhasil.', time: '1 jam yang lalu', unread: true },
-    { id: 3, title: 'Promo Spesial', desc: 'Gunakan kode HELP50 untuk diskon jasa pembersihan.', time: '2 hari yang lalu', unread: false }
-  ]);
+  // Realtime Firebase States for Notifications and Reviews
+  // Inisialisasi awal empty array agar tidak ada dummy text flash 
+  const[notifications, setNotifications] = useState([]);
+  const [reviews, setReviews] = useState([]);
 
   const [walletHistory, setWalletHistory] = useState([
     { id: 1, type: 'topup', amount: 150000, title: 'Top Up Saldo', date: 'Hari ini, 09:00', status: 'Berhasil' },
@@ -429,13 +427,8 @@ export default function App() {
     { id: 3, type: 'refund', amount: 50000, title: 'Refund: Tugas Dibatalkan', date: '10 Mei 2026', status: 'Berhasil' }
   ]);
 
-  const [reviews] = useState([
-    { id: 1, user: 'Budi Santoso', rating: 5, comment: 'Pekerjaan sangat cepat dan sesuai ekspektasi. Terima kasih banyak!', date: '11 Mei 2026' },
-    { id: 2, user: 'Siti Aminah', rating: 5, comment: 'Helper sangat sopan dan amanah. Sangat merekomendasikan.', date: '05 Mei 2026' }
-  ]);
-
-  // filter explore tasks
-  let filteredExploreTasks = tasks.filter(t => t.status === 'available');
+  // Filter explore tasks
+  let filteredExploreTasks = tasks.filter(t => t.status === 'available' || t.status === 'pending');
   filteredExploreTasks = filteredExploreTasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) || task.desc.toLowerCase().includes(searchQuery.toLowerCase());
     const normalizedSelectedCat = selectedCategory === 'Jasa Titip' ? 'Delivery' : selectedCategory;
@@ -467,14 +460,16 @@ export default function App() {
     });
 
     return () => unsubscribeAuth();
-  }, []);
+  },[]);
 
   useEffect(() => {
     if (!user) return;
     const profileRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
     const unsubProfile = onSnapshot(profileRef, (docSnap) => {
       if (docSnap.exists()) {
-        setUserProfile(docSnap.data());
+        const data = docSnap.data();
+        setUserProfile(data);
+        if (data.role) setUserRole(data.role);
       } else {
         const defaultProfile = {
           name: 'New User',
@@ -482,6 +477,10 @@ export default function App() {
           phone: '081234567890',
           balance: 150000,
           rating: 5.0,
+          role: 'user',
+          services: [],
+          bankAccounts:[],
+          verificationStatus: 'unverified',
           joinedAt: new Date().toISOString()
         };
         setDoc(profileRef, defaultProfile);
@@ -496,11 +495,69 @@ export default function App() {
       setTasks(fetchedTasks);
     }, (err) => console.error(err));
 
+    // REALTIME CHAT LISTENER
+    const qChats = query(collection(db, 'artifacts', appId, 'public', 'data', 'chats'));
+    const unsubChats = onSnapshot(qChats, (snap) => {
+       const fetchedChats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+       fetchedChats.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)).reverse();
+       setChats(fetchedChats);
+    }, (err) => console.error(err));
+
+    // REALTIME NOTIFICATIONS LISTENER
+    const qNotifs = query(collection(db, 'artifacts', appId, 'public', 'data', 'users', user.uid, 'notifications'));
+    const unsubNotifs = onSnapshot(qNotifs, (snap) => {
+      const fetchedNotifs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      fetchedNotifs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).reverse();
+      setNotifications(fetchedNotifs); // real time state update
+    }, (err) => console.error(err));
+
+    // REALTIME REVIEWS LISTENER
+    const qReviews = query(collection(db, 'artifacts', appId, 'public', 'data', 'users', user.uid, 'reviews'));
+    const unsubReviews = onSnapshot(qReviews, (snap) => {
+      const fetchedReviews = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setReviews(fetchedReviews);
+    }, (err) => console.error(err));
+
     return () => {
       unsubProfile();
       unsubTasks();
+      unsubChats();
+      unsubNotifs();
+      unsubReviews();
     };
   }, [user]);
+
+  // HELPER FUNCTION TO SEND REALTIME NOTIFICATIONS
+  const sendNotification = async (targetUid, title, desc) => {
+    if(!targetUid) return;
+    try {
+      const notifRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'users', targetUid, 'notifications'));
+      await setDoc(notifRef, {
+        title,
+        desc,
+        createdAt: new Date().toISOString(),
+        time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        unread: true
+      });
+    } catch(e) { console.error("Error notif", e); }
+  }
+
+  const markAllReadNotifs = async () => {
+    if(!user) return;
+    const unreadNotifs = notifications.filter(n => n.unread);
+    for(const n of unreadNotifs) {
+      const ref = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid, 'notifications', n.id);
+      await updateDoc(ref, { unread: false }).catch(e => console.error(e));
+    }
+  };
+
+  const handleNotifClick = async (notifId) => {
+    if(!user) return;
+    try {
+      const ref = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid, 'notifications', notifId);
+      await updateDoc(ref, { unread: false });
+    } catch(e) { console.error("Error updating notif", e); }
+  };
 
   // ACTIONS
   const handleNavigation = (view) => {
@@ -529,7 +586,7 @@ export default function App() {
       name: `${formData.firstName} ${formData.lastName}`.trim() || 'New User',
       balance: 150000
     });
-    handleNavigation('home');
+    handleNavigation('role_selection');
 
     try {
       const userId = user?.uid || 'user-' + Date.now();
@@ -540,8 +597,15 @@ export default function App() {
         phone: formData.phone || '081234567890',
         balance: 150000,
         rating: 5.0,
+        role: 'user',
+        services: [],
+        bankAccounts:[],
+        verificationStatus: 'unverified',
         joinedAt: new Date().toISOString()
       });
+
+      // Menambahkan notifikasi welcome secara otomatis ke database ketika register pertama kali
+      await sendNotification(userId, 'Selamat Datang di HelpBlue', 'Akun Anda berhasil dibuat. Jelajahi aplikasi dan temukan solusi untuk tugas harian Anda.');
     } catch (err) {
       console.warn("Simpan data tertunda, tapi navigasi tetap jalan:", err);
     }
@@ -550,6 +614,20 @@ export default function App() {
   const handleLogin = (e) => {
     e.preventDefault();
     handleNavigation('home');
+  };
+
+  const handleRoleSelect = async (role) => {
+    setUserRole(role);
+    handleNavigation('home');
+    
+    if (user) {
+      try {
+        const profileRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+        await updateDoc(profileRef, { role: role });
+      } catch (err) {
+        console.error("Gagal update role", err);
+      }
+    }
   };
 
   const handlePostTask = async (e) => {
@@ -566,7 +644,8 @@ export default function App() {
       requesterId: user?.uid || 'guest-123',
       requesterName: userProfile?.name || 'Guest User',
       requesterRating: userProfile?.rating || 5.0,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      isReviewed: false
     };
 
     setTasks(prev => [{ id: 'local-' + Date.now(), ...newTask }, ...prev]);
@@ -591,12 +670,31 @@ export default function App() {
        return;
     }
     try {
+      // 1. Update status task menjadi ongoing
       const taskRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', task.id);
       await updateDoc(taskRef, {
         status: 'ongoing',
         helperId: user.uid,
         helperName: userProfile.name
       });
+
+      // 2. Buat Room Chat Baru di Firebase
+      const chatRef = doc(db, 'artifacts', appId, 'public', 'data', 'chats', task.id);
+      await setDoc(chatRef, {
+         taskId: task.id,
+         taskTitle: task.title,
+         userId: task.requesterId,
+         userName: task.requesterName,
+         helperId: user.uid,
+         helperName: userProfile.name,
+         lastMessage: 'Chat room dibuat. Silakan mulai percakapan.',
+         messages:[],
+         updatedAt: new Date().toISOString()
+      });
+
+      // 3. Notifikasi ke User
+      sendNotification(task.requesterId, 'Tugas Diambil!', `Tugas "${task.title}" telah diambil oleh Helper ${userProfile.name}.`);
+
       setActivityTab('ongoing');
       handleNavigation('activity');
     } catch (err) {
@@ -606,8 +704,15 @@ export default function App() {
 
   const handleFinishTask = async (taskId) => {
     try {
+      const targetTask = tasks.find(t => t.id === taskId);
       const taskRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId);
       await updateDoc(taskRef, { status: 'history' });
+      
+      if(targetTask) {
+        sendNotification(targetTask.requesterId, 'Tugas Selesai!', `Tugas "${targetTask.title}" telah diselesaikan. Silakan berikan ulasan.`);
+        sendNotification(targetTask.helperId, 'Tugas Selesai!', `Anda telah menyelesaikan tugas "${targetTask.title}".`);
+      }
+      handleNavigation('activity');
     } catch (err) {
       console.error("Error finishing task:", err);
     }
@@ -625,11 +730,132 @@ export default function App() {
     }
   };
 
+  const handleSubmitReview = async (taskId, helperId) => {
+    try {
+      const reviewRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'users', helperId, 'reviews'));
+      await setDoc(reviewRef, {
+          taskId,
+          user: userProfile?.name || 'User',
+          rating: ratingInput,
+          comment: reviewInput,
+          date: new Date().toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})
+      });
+      const taskRef = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId);
+      await updateDoc(taskRef, { isReviewed: true });
+      
+      setReviewInput('');
+      sendNotification(helperId, 'Ulasan Baru!', `Anda mendapat rating ${ratingInput} Bintang dari ${userProfile?.name || 'User'}`);
+      
+      handleNavigation('activity');
+    } catch(err) {
+      console.error("Gagal submit review", err);
+    }
+  }
+
+  // REALTIME CHAT SEND FUNCTION
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !activeChatContact) return;
+    
+    const newMsg = {
+      id: Date.now(),
+      from: userRole, 
+      text: chatInput.trim(),
+      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    const currentChat = chats.find(c => c.id === activeChatContact.id) || activeChatContact;
+    const updatedMessages = [...(currentChat.messages || []), newMsg];
+    
+    setChatInput('');
+
+    if (user) {
+       try {
+         const chatRef = doc(db, 'artifacts', appId, 'public', 'data', 'chats', activeChatContact.id);
+         await updateDoc(chatRef, {
+            messages: updatedMessages,
+            lastMessage: newMsg.text,
+            updatedAt: new Date().toISOString()
+         });
+       } catch (err) {
+         console.error("Gagal mengirim pesan", err);
+       }
+    }
+  };
+
+  // HELPER PROFILE FUNCTIONS
+  const toggleService = async (serviceName) => {
+    if (!user || !userProfile) return;
+    let currentServices = userProfile.services ||[];
+    if (currentServices.includes(serviceName)) {
+      currentServices = currentServices.filter(s => s !== serviceName);
+    } else {
+      currentServices.push(serviceName);
+    }
+    setUserProfile(prev => ({...prev, services: currentServices}));
+    try {
+      const profileRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+      await updateDoc(profileRef, { services: currentServices });
+    } catch(e) {}
+  };
+
+  const handleAddBankAccount = async (e) => {
+    e.preventDefault();
+    if (!user || !userProfile) return;
+    const newBank = { ...newBankAccount, id: Date.now() };
+    const updatedBanks =[...(userProfile.bankAccounts || []), newBank];
+    setUserProfile(prev => ({...prev, bankAccounts: updatedBanks}));
+    setNewBankAccount({ bankName: 'BCA', accountNumber: '', accountName: '' });
+    
+    try {
+      const profileRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+      await updateDoc(profileRef, { bankAccounts: updatedBanks });
+    } catch(e) {}
+  };
+
+  const handleDeleteBankAccount = async (bankId) => {
+    if (!user || !userProfile) return;
+    const updatedBanks = (userProfile.bankAccounts ||[]).filter(b => b.id !== bankId);
+    setUserProfile(prev => ({...prev, bankAccounts: updatedBanks}));
+    try {
+      const profileRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+      await updateDoc(profileRef, { bankAccounts: updatedBanks });
+    } catch(e) {}
+  };
+
+  // FUNGSI UNTUK MENGUPLOAD KTP & SELFIE SECARA REALTIME KE FIRESTORE MENGGUNAKAN BASE64
+  const handleFileUpload = async (event, type) => {
+    const file = event.target.files[0];
+    if (!file || !user) return;
+    
+    if(type === 'ktp') setUploadingKTP(true);
+    if(type === 'selfie') setUploadingSelfie(true);
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+       const base64Str = e.target.result;
+       try {
+          const profileRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+          if (type === 'ktp') {
+             await updateDoc(profileRef, { ktpDataUrl: base64Str });
+             setUserProfile(prev => ({...prev, ktpDataUrl: base64Str}));
+             setUploadingKTP(false);
+          } else if (type === 'selfie') {
+             await updateDoc(profileRef, { selfieDataUrl: base64Str, verificationStatus: 'verified' });
+             setUserProfile(prev => ({...prev, selfieDataUrl: base64Str, verificationStatus: 'verified'}));
+             setUploadingSelfie(false);
+          }
+       } catch(err) {
+          console.error("Upload error", err);
+          if(type === 'ktp') setUploadingKTP(false);
+          if(type === 'selfie') setUploadingSelfie(false);
+       }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveProfile = async () => {
     if (!user) return;
-    
     setUserProfile(prev => ({ ...prev, name: editProfileData.name, phone: editProfileData.phone }));
-    
     try {
       const profileRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
       await updateDoc(profileRef, {
@@ -639,7 +865,6 @@ export default function App() {
     } catch (error) {
       console.error("Gagal simpan ke database", error);
     }
-    
     handleNavigation('profile');
   };
 
@@ -659,12 +884,8 @@ export default function App() {
 
   const handleTopUpSubmit = () => {
     if(!topupAmount || !topupMethod) return;
-    
     const amount = parseInt(topupAmount);
-    
-    if(userProfile) {
-      setUserProfile(prev => ({ ...prev, balance: prev.balance + amount }));
-    }
+    if(userProfile) { setUserProfile(prev => ({ ...prev, balance: prev.balance + amount })); }
     
     const newHistory = {
       id: Date.now(),
@@ -676,12 +897,40 @@ export default function App() {
     };
     setWalletHistory([newHistory, ...walletHistory]);
     
+    if(user) { sendNotification(user.uid, 'Dana Masuk', `Top-up saldo sebesar Rp ${amount.toLocaleString('id-ID')} berhasil.`); }
+    
     handleNavigation('wallet_history');
     setTopupAmount('');
     setTopupMethod('');
   };
 
+  const handleWithdrawSubmit = () => {
+    if(!withdrawAmount || !withdrawMethod) return;
+    const amount = parseInt(withdrawAmount);
+    if (userProfile && amount > userProfile.balance) {
+      setWithdrawError('Saldo tidak mencukupi untuk ditarik.');
+      return;
+    }
+    if(userProfile) { setUserProfile(prev => ({ ...prev, balance: prev.balance - amount })); }
+    
+    const newHistory = {
+      id: Date.now(),
+      type: 'withdraw',
+      amount: -amount,
+      title: `Tarik Tunai (${withdrawMethod})`,
+      date: 'Baru saja',
+      status: 'Diproses'
+    };
+    setWalletHistory([newHistory, ...walletHistory]);
+    handleNavigation('wallet_history');
+    setWithdrawAmount('');
+    setWithdrawMethod('');
+    setWithdrawError('');
+  };
+
   // VIEWS (LANDING, LOGIN, REGISTER)
+
+  const dashboardProps = { currentView, handleNavigation, showNotif, setShowNotif, notifications, userRole, markAllReadNotifs, handleNotifClick };
 
   if (currentView === 'landing') {
     return (
@@ -754,7 +1003,7 @@ export default function App() {
                 <div className="bg-white p-10 rounded-[2rem] text-left shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border border-slate-100">
                   <div className="bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center text-blue-600 mb-8 font-black text-3xl">?</div>
                   <h3 className="text-xl font-black mb-4 text-slate-800">What is HelpBlue?</h3>
-                  <p className="text-slate-500 text-sm leading-relaxed font-medium">HelpBlue is a leading task management platform that connects individuals with skilled professionals for on-demand task completion.</p>
+                  <p className="text-slate-500 text-sm leading-relaxed font-medium">HelpBlue is a leading task management platform that connects individuals dengan skilled professionals for on-demand task completion.</p>
                 </div>
                 <div className="bg-white p-10 rounded-[2rem] text-left shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border border-slate-100">
                   <div className="bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center text-blue-600 mb-8"><Lightbulb size={32} /></div>
@@ -966,7 +1215,296 @@ export default function App() {
 
   // DASHBOARD VIEWS
 
-  const dashboardProps = { currentView, handleNavigation, showNotif, setShowNotif, notifications };
+  if (currentView === 'role_selection') {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 font-sans relative">
+        <div className="w-full max-w-md animate-[fadeIn_0.3s_ease-out] flex flex-col items-center">
+          {/* Logo / Icon */}
+          <div className="mb-8">
+            <Send size={56} className="text-blue-600 transform -rotate-45 ml-2" strokeWidth={2.5} />
+          </div>
+
+          <h1 className="text-2xl md:text-[28px] font-black text-slate-900 mb-2 text-center tracking-tight">
+            Selamat Datang di On-Demand App
+          </h1>
+          <p className="text-slate-500 mb-10 text-center font-medium text-sm">Pilih akses masuk kamu</p>
+
+          <div className="w-full space-y-4">
+            {/* Pilihan User */}
+            <button
+              onClick={() => handleRoleSelect('user')}
+              className="w-full bg-white border border-slate-200 hover:border-blue-500 hover:shadow-md p-5 rounded-2xl flex items-center transition-all group text-left"
+            >
+              <div className="mr-5">
+                <User className="text-blue-600" size={28} strokeWidth={2} />
+              </div>
+              <div>
+                <h3 className="font-black text-lg text-slate-900">Saya Pengguna</h3>
+                <p className="text-slate-500 text-xs font-medium mt-0.5">Mencari bantuan layanan</p>
+              </div>
+            </button>
+
+            {/* Pilihan Helper */}
+            <button
+              onClick={() => handleRoleSelect('helper')}
+              className="w-full bg-white border border-slate-200 hover:border-orange-500 hover:shadow-md p-5 rounded-2xl flex items-center transition-all group text-left"
+            >
+              <div className="mr-5">
+                <Briefcase className="text-orange-600" size={28} strokeWidth={2} />
+              </div>
+              <div>
+                <h3 className="font-black text-lg text-slate-900">Saya Helper</h3>
+                <p className="text-slate-500 text-xs font-medium mt-0.5">Ingin menyediakan layanan</p>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // HELPER DARK DASHBOARD THEME (AKSEN HITAM/GELAP)
+  // ==========================================
+  if (currentView === 'home' && userRole === 'helper') {
+    const currentRating = reviews.length > 0 ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1) : '0.0';
+    const completedTasksCount = tasks.filter(t => t.helperId === user?.uid && t.status === 'history').length || 0;
+
+    return (
+      <DashboardLayout {...dashboardProps}>
+        <div className="bg-slate-900 text-white p-6 md:p-10 pb-24 md:pb-28 rounded-b-[3rem] relative shadow-lg shadow-black/50 border-b border-slate-800">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <p className="text-slate-400 font-bold mb-1">Halo Partner,</p>
+              <h2 className="text-2xl md:text-3xl font-black">{formData.firstName || userProfile?.name || 'Helper'}</h2>
+            </div>
+            <div className="flex gap-3">
+              <div className="relative bg-slate-800 border border-slate-700 p-3 rounded-2xl backdrop-blur-md cursor-pointer hover:bg-slate-700 transition" onClick={() => setShowNotif(!showNotif)}>
+                <Bell size={24} className="text-white" />
+                {notifications.some(n => n.unread) && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-slate-900"></span>}
+              </div>
+              <div className="bg-slate-800 border border-slate-700 p-3 rounded-2xl backdrop-blur-md cursor-pointer hover:bg-slate-700 transition" onClick={() => handleNavigation('profile')}>
+                <User size={24} className="text-white" />
+              </div>
+            </div>
+          </div>
+          
+          <div className={`border p-6 rounded-[2rem] flex items-center justify-between backdrop-blur-xl shadow-2xl transition-all duration-500 ${isOnline ? 'bg-slate-800 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'bg-slate-800 border-slate-700'}`}>
+            <div>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">Status Pekerjaan</p>
+              <div className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full transition-all duration-300 ${isOnline ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,1)]' : 'bg-slate-600'}`}></div>
+                <h3 className={`font-black text-xl transition-colors duration-300 ${isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
+                  {isOnline ? 'ONLINE' : 'OFFLINE'}
+                </h3>
+              </div>
+            </div>
+            <button 
+              onClick={() => setIsOnline(!isOnline)}
+              className={`relative w-16 h-8 rounded-full transition-colors duration-300 ${isOnline ? 'bg-emerald-500' : 'bg-slate-700'}`}
+            >
+              <div className={`absolute top-1 left-1 bg-white w-6 h-6 rounded-full transition-transform duration-300 shadow-md ${isOnline ? 'transform translate-x-8' : 'transform translate-x-0'}`}></div>
+            </button>
+          </div>
+        </div>
+
+        <div className="px-6 md:px-10 -mt-12 grid grid-cols-2 gap-4 relative z-10">
+          <div onClick={() => handleNavigation('earnings')} className="bg-slate-800 p-6 rounded-[2rem] shadow-xl shadow-black/20 border border-slate-700 cursor-pointer hover:-translate-y-1 transition-all flex flex-col items-center text-center group">
+            <div className="bg-slate-700 p-5 rounded-3xl mb-4 group-hover:bg-emerald-500/20 transition-colors border border-slate-600">
+              <DollarSign size={36} className="text-emerald-500 group-hover:text-emerald-400 transition-colors" />
+            </div>
+            <h3 className="font-black text-white text-lg">Pendapatan</h3>
+            <p className="text-xs text-slate-400 font-medium mt-1">Cek saldo & tarik tunai</p>
+          </div>
+          
+          <div onClick={() => handleNavigation('order_feed')} className="bg-slate-800 p-6 rounded-[2rem] shadow-xl shadow-black/20 border border-slate-700 cursor-pointer hover:-translate-y-1 transition-all flex flex-col items-center text-center group">
+            <div className="bg-slate-700 p-5 rounded-3xl mb-4 group-hover:bg-blue-500/20 transition-colors border border-slate-600">
+              <List size={36} className="text-blue-500 group-hover:text-blue-400 transition-colors" />
+            </div>
+            <h3 className="font-black text-white text-lg">Orderan</h3>
+            <p className="text-xs text-slate-400 font-medium mt-1">Cari tugas tersedia</p>
+          </div>
+        </div>
+
+        <div className="p-6 md:p-10 mt-2">
+          <div className="flex justify-between items-end mb-6">
+            <h3 className="font-black text-2xl text-slate-900 tracking-tight">Performa Anda</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+             <div onClick={() => handleNavigation('reviews')} className="bg-slate-800 p-6 rounded-[2rem] border border-slate-700 shadow-sm flex flex-col items-center justify-center text-center cursor-pointer hover:-translate-y-1 transition-all">
+                <Star size={32} className="text-amber-400 mb-3" fill="currentColor"/>
+                <h4 className="font-black text-2xl text-white mb-1">{currentRating}</h4>
+                <p className="text-xs font-bold text-slate-400">Rating Helper</p>
+             </div>
+             <div onClick={() => { setActivityTab('history'); handleNavigation('activity'); }} className="bg-slate-800 p-6 rounded-[2rem] border border-slate-700 shadow-sm flex flex-col items-center justify-center text-center cursor-pointer hover:-translate-y-1 transition-all">
+                <CheckSquare size={32} className="text-emerald-500 mb-3" />
+                <h4 className="font-black text-2xl text-white mb-1">
+                   {completedTasksCount}
+                </h4>
+                <p className="text-xs font-bold text-slate-400">Tugas Selesai</p>
+             </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (currentView === 'order_feed' && userRole === 'helper') {
+    const availableOrders = tasks.filter(t => t.status === 'pending');
+    
+    return (
+      <DashboardLayout {...dashboardProps}>
+        <div className="bg-white p-6 sticky top-0 z-10 shadow-sm border-b border-slate-100">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-4">
+              <button onClick={() => handleNavigation('home')} className="bg-slate-50 p-2 rounded-xl text-slate-600 md:hidden"><ArrowLeft size={24} /></button>
+              <div>
+                <h2 className="font-black text-2xl md:text-3xl text-slate-800 tracking-tight">Order Feed</h2>
+                <p className="text-xs font-bold text-emerald-600 mt-1 flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div> {availableOrders.length} Orderan Baru Tersedia
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <input 
+              type="text" 
+              placeholder="Cari berdasarkan lokasi atau jenis tugas..." 
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold text-slate-700 focus:border-blue-500 outline-none" 
+            />
+          </div>
+        </div>
+
+        <div className="p-6 md:p-8 space-y-5 bg-slate-50 min-h-full">
+          {!isOnline && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-700 p-4 rounded-2xl text-sm font-bold flex items-center gap-3">
+              <Power size={20} className="shrink-0" />
+              Status Anda sedang OFFLINE. Aktifkan status di Dashboard untuk mulai bekerja.
+            </div>
+          )}
+
+          {availableOrders.map(task => (
+            <div key={task.id} className="bg-white p-6 rounded-[2rem] shadow-sm hover:shadow-md border border-slate-100 transition-all">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center font-black text-slate-600">
+                    {task.requesterName.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-slate-800">{task.requesterName}</p>
+                    <p className="text-[10px] font-bold text-slate-400">Membutuhkan Bantuan</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-black text-emerald-600 tracking-tight">Rp {task.budget.toLocaleString('id-ID')}</p>
+                </div>
+              </div>
+              <h3 className="font-black text-xl text-slate-800 mb-2">{task.title}</h3>
+              <p className="text-sm text-slate-500 font-medium line-clamp-2 leading-relaxed mb-4">{task.desc}</p>
+              
+              <div className="flex items-center gap-2 mb-5">
+                <MapPin size={16} className="text-red-500 shrink-0" />
+                <p className="text-xs font-bold text-slate-600 truncate">{task.location || 'Lokasi belum diset'}</p>
+              </div>
+
+              <div className="pt-4 border-t border-slate-50 flex gap-3">
+                <button 
+                  onClick={() => { setActiveTask(task); setTaskDetailContext('explore'); handleNavigation('task_detail'); }}
+                  className="flex-1 bg-slate-50 text-slate-700 font-black py-3.5 rounded-xl text-sm border border-slate-200 hover:bg-slate-100 transition"
+                >
+                  Detail Tugas
+                </button>
+                <button 
+                  onClick={() => handleTakeTask(task)}
+                  disabled={!isOnline}
+                  className={`flex-1 font-black py-3.5 rounded-xl text-sm shadow-md transition ${isOnline ? 'bg-blue-600 text-white shadow-blue-200 hover:bg-blue-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
+                >
+                  Terima Order
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {availableOrders.length === 0 && (
+            <div className="text-center p-10 mt-10">
+               <div className="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                 <Search className="w-8 h-8 text-slate-400" />
+               </div>
+               <h3 className="font-black text-slate-800 text-lg mb-2">Belum Ada Orderan</h3>
+               <p className="text-sm text-slate-500 font-medium">Orderan baru dari pengguna akan muncul di sini.</p>
+            </div>
+          )}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (currentView === 'earnings' && userRole === 'helper') {
+    return (
+      <DashboardLayout {...dashboardProps}>
+        <div className="bg-white p-6 sticky top-0 z-10 shadow-sm border-b border-slate-100">
+          <div className="flex items-center gap-4 mb-6">
+            <button onClick={() => handleNavigation('home')} className="bg-slate-50 p-2 rounded-xl text-slate-600"><ArrowLeft size={24} /></button>
+            <h2 className="font-black text-2xl text-slate-800 tracking-tight">Pendapatan</h2>
+          </div>
+          <div className="bg-emerald-600 p-8 rounded-[2rem] text-white relative shadow-lg shadow-emerald-200 overflow-hidden">
+             <div className="absolute top-0 right-0 opacity-10 transform translate-x-4 -translate-y-4">
+                <TrendingUp size={120} />
+             </div>
+             <div className="relative z-10">
+               <p className="text-xs text-emerald-100 font-bold uppercase tracking-widest mb-2">Saldo Bisa Ditarik</p>
+               <h3 className="text-4xl font-black tracking-tight mb-6">Rp {(userProfile?.balance || 0).toLocaleString('id-ID')}</h3>
+               <button onClick={() => handleNavigation('withdraw')} className="bg-white text-emerald-700 w-full md:w-auto px-8 py-3.5 rounded-xl text-sm font-black shadow-md hover:bg-emerald-50 transition">
+                  Tarik Tunai (Withdraw)
+               </button>
+             </div>
+          </div>
+        </div>
+        
+        <div className="p-6 md:p-8 bg-slate-50 min-h-full">
+          <div className="flex justify-between items-center mb-5">
+             <h4 className="font-black text-slate-800 text-lg">Riwayat Pekerjaan</h4>
+             <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg cursor-pointer">Bulan Ini</span>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="bg-emerald-50 text-emerald-600 p-3 rounded-xl">
+                  <CheckSquare size={20} />
+                </div>
+                <div>
+                  <h5 className="font-black text-slate-800 text-sm">Beli Kopi Cafetaria</h5>
+                  <p className="text-[10px] text-slate-400 font-bold mt-1">Hari ini, 10:30 AM</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-black text-emerald-600 text-base">+ Rp 25.000</p>
+                <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase font-black">Selesai</span>
+              </div>
+            </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="bg-emerald-50 text-emerald-600 p-3 rounded-xl">
+                  <CheckSquare size={20} />
+                </div>
+                <div>
+                  <h5 className="font-black text-slate-800 text-sm">Print Makalah</h5>
+                  <p className="text-[10px] text-slate-400 font-bold mt-1">Kemarin, 14:00</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-black text-emerald-600 text-base">+ Rp 15.000</p>
+                <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase font-black">Selesai</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (currentView === 'home') {
     return (
@@ -980,7 +1518,7 @@ export default function App() {
             <div className="flex gap-3">
               <div className="relative bg-white/10 border border-white/20 p-3 rounded-2xl backdrop-blur-md cursor-pointer hover:bg-white/20 transition" onClick={() => setShowNotif(!showNotif)}>
                 <Bell size={24} className="text-white" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-blue-600"></span>
+                {notifications.some(n => n.unread) && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-blue-600"></span>}
               </div>
               <div className="bg-white/10 border border-white/20 p-3 rounded-2xl backdrop-blur-md cursor-pointer hover:bg-white/20 transition" onClick={() => handleNavigation('profile')}>
                 <User size={24} className="text-white" />
@@ -1066,7 +1604,7 @@ export default function App() {
             </div>
             <button onClick={() => setShowNotif(!showNotif)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-full relative">
               <Bell size={24}/>
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+              {notifications.some(n => n.unread) && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
             </button>
           </div>
 
@@ -1146,11 +1684,11 @@ export default function App() {
     );
   }
 
-  // map loc pick
+  // Map Location Picker
   if (currentView === 'post_task') {
     return (
       <DashboardLayout {...dashboardProps}>
-        {/* map picker overlay, fullscreen */}
+        {/* Map picker overlay - fullscreen */}
         {showMapPicker && (
           <MapLocationPicker
             value={taskForm.location}
@@ -1189,11 +1727,11 @@ export default function App() {
                 </div>
               </div>
 
-              {/* map loc picker field */}
+              {/* Map Location Picker Field */}
               <div className="space-y-2">
                 <label className="text-sm font-black text-slate-700 ml-1">Lokasi Penjemputan / Pengantaran</label>
                 
-                {/* map preview button */}
+                {/* Map preview button */}
                 <button
                   type="button"
                   onClick={() => setShowMapPicker(true)}
@@ -1220,7 +1758,7 @@ export default function App() {
                   )}
                 </button>
 
-                {/* manual input fallback */}
+                {/* Manual input fallback */}
                 <div className="relative">
                   <input 
                     value={taskForm.location} 
@@ -1331,6 +1869,19 @@ export default function App() {
             </div>
           )}
 
+          {isOwnTask && activeTask.status === 'history' && !activeTask.isReviewed && (
+            <div className="bg-white border border-slate-100 shadow-sm rounded-[2rem] p-6 mb-6">
+              <h3 className="font-black text-slate-800 mb-3">Beri Nilai Helper</h3>
+              <div className="flex gap-2 mb-4">
+                {[1,2,3,4,5].map(star => (
+                  <Star key={star} size={28} onClick={() => setRatingInput(star)} className={`cursor-pointer ${ratingInput >= star ? 'text-amber-400' : 'text-slate-200'}`} fill={ratingInput >= star ? 'currentColor' : 'none'}/>
+                ))}
+              </div>
+              <textarea value={reviewInput} onChange={(e) => setReviewInput(e.target.value)} placeholder="Tulis ulasan Anda..." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-medium focus:outline-none focus:border-blue-500 mb-3" rows="3"></textarea>
+              <button onClick={() => handleSubmitReview(activeTask.id, activeTask.helperId)} className="w-full bg-blue-600 text-white font-black py-3 rounded-xl shadow-md hover:bg-blue-700 transition">Kirim Ulasan</button>
+            </div>
+          )}
+
           {isOwnTask && activeTask.status === 'ongoing' && activeTask.helperName && (
             <div className="bg-emerald-50 border border-emerald-100 rounded-[2rem] p-6 mb-6">
               <p className="text-xs text-emerald-600 font-black uppercase tracking-widest mb-2">Helper Kamu</p>
@@ -1376,7 +1927,7 @@ export default function App() {
               )}
             </div>
           ) : (
-            !isOwnTask && (
+            !isOwnTask && activeTask.status === 'pending' && (
               <button 
                 onClick={() => handleTakeTask(activeTask)}
                 className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] transition text-lg"
@@ -1384,6 +1935,16 @@ export default function App() {
                 Accept This Task
               </button>
             )
+          )}
+          {!isOwnTask && activeTask.status === 'ongoing' && (
+             <div className="flex gap-3">
+               <button onClick={() => handleNavigation('chat_list')} className="flex-1 bg-slate-100 text-slate-700 font-black py-5 rounded-2xl hover:bg-slate-200 transition text-lg flex items-center justify-center gap-2">
+                  Chat User
+               </button>
+               <button onClick={() => handleFinishTask(activeTask.id)} className="flex-1 bg-emerald-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-emerald-200 hover:bg-emerald-700 hover:scale-[1.02] transition text-lg flex items-center justify-center gap-2">
+                  Selesaikan Tugas
+               </button>
+             </div>
           )}
         </div>
       </DashboardLayout>
@@ -1395,7 +1956,11 @@ export default function App() {
       let filtered = tasks.filter(t => t.status === statusFilter);
       
       if (user) {
-        filtered = filtered.filter(t => t.requesterId === user.uid);
+        if(userRole === 'helper') {
+          filtered = filtered.filter(t => t.helperId === user.uid);
+        } else {
+          filtered = filtered.filter(t => t.requesterId === user.uid);
+        }
       } else {
         filtered = filtered.filter(t => t.requesterId === 'guest-123');
       }
@@ -1409,7 +1974,7 @@ export default function App() {
                statusFilter === 'ongoing' ? 'Tidak ada pesanan yang sedang berjalan.' :
                'Belum ada riwayat pesanan.'}
             </p>
-            {statusFilter === 'pending' && (
+            {statusFilter === 'pending' && userRole !== 'helper' && (
               <button onClick={() => handleNavigation('post_task')} className="mt-4 bg-blue-600 text-white font-black px-6 py-3 rounded-xl shadow-md shadow-blue-200 hover:bg-blue-700 transition text-sm">
                 + Post Task Baru
               </button>
@@ -1420,7 +1985,7 @@ export default function App() {
 
       return filtered.map(task => (
         <div key={task.id} 
-          onClick={() => { setActiveTask(task); setTaskDetailContext('user'); handleNavigation('task_detail'); }}
+          onClick={() => { setActiveTask(task); setTaskDetailContext(userRole === 'helper' ? 'explore' : 'user'); handleNavigation('task_detail'); }}
           className="bg-white p-6 rounded-[2rem] shadow-sm hover:shadow-md border border-slate-100 mb-5 transition-all cursor-pointer hover:-translate-y-0.5"
         >
           <div className="flex justify-between items-start mb-3">
@@ -1442,12 +2007,12 @@ export default function App() {
           
           {task.status === 'ongoing' && (
             <div className="flex flex-col sm:flex-row gap-3 mt-2 pt-5 border-t border-slate-50" onClick={(e) => e.stopPropagation()}>
-              <button onClick={() => handleNavigation('chat_list')} className="flex-1 bg-blue-50 text-blue-700 text-sm font-black py-4 rounded-xl flex justify-center items-center gap-2 hover:bg-blue-100 transition">
-                <MessageCircle size={18} /> Chat Helper
+              <button onClick={() => handleNavigation('chat_list')} className={`flex-1 ${userRole === 'helper' ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'} text-sm font-black py-4 rounded-xl flex justify-center items-center gap-2 transition`}>
+                <MessageCircle size={18} /> Chat {userRole === 'helper' ? 'User' : 'Helper'}
               </button>
             </div>
           )}
-          {task.status === 'pending' && (
+          {task.status === 'pending' && userRole !== 'helper' && (
             <div className="flex gap-3 mt-2 pt-4 border-t border-slate-50" onClick={(e) => e.stopPropagation()}>
               <button 
                 onClick={() => handleCancelTask(task.id)}
@@ -1495,31 +2060,30 @@ export default function App() {
     );
   }
 
-  // CHAT LIST VIEW 
+  // =======================================================
+  // CHAT LIST VIEW (REAL-TIME FIREBASE)
+  // =======================================================
   if (currentView === 'chat_list') {
-    const totalUnread = chatConversations.reduce((sum, c) => sum + c.unread, 0);
+    const activeConversations = chats.filter(c => userRole === 'helper' ? c.helperId === user?.uid : c.userId === user?.uid);
+    const totalUnread = 0; 
 
     return (
       <DashboardLayout {...dashboardProps}>
-        {/* Header */}
         <div className="bg-white p-6 sticky top-0 z-10 shadow-sm border-b border-slate-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button onClick={() => handleNavigation('home')} className="bg-slate-50 p-2 rounded-xl text-slate-600 md:hidden"><ArrowLeft size={24} /></button>
               <div>
                 <h2 className="font-black text-2xl md:text-3xl text-slate-800 tracking-tight">Messages</h2>
-                {totalUnread > 0 && (
-                  <p className="text-xs font-bold text-blue-600 mt-0.5">{totalUnread} pesan belum dibaca</p>
-                )}
+                {totalUnread > 0 && <p className="text-xs font-bold text-blue-600 mt-0.5">{totalUnread} pesan belum dibaca</p>}
               </div>
             </div>
             <button onClick={() => setShowNotif(!showNotif)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-full relative">
               <Bell size={24}/>
-              {totalUnread > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+              {notifications.some(n => n.unread) && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
             </button>
           </div>
 
-          {/* Search bar */}
           <div className="relative mt-5">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
@@ -1530,60 +2094,40 @@ export default function App() {
           </div>
         </div>
 
-        {/* Conversation List */}
         <div className="bg-white divide-y divide-slate-50 min-h-full">
-          {chatConversations.map((convo) => (
-            <div
-              key={convo.id}
-              onClick={() => {
-                setActiveChatContact(convo);
-                handleNavigation('chat');
-              }}
-              className="flex items-center gap-4 p-5 md:p-6 cursor-pointer hover:bg-slate-50 transition-colors active:bg-blue-50"
-            >
-              {/* Avatar */}
-              <div className="relative shrink-0">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black text-white shadow-md ${
-                  convo.id === 1 ? 'bg-blue-600' : convo.id === 2 ? 'bg-emerald-600' : 'bg-purple-600'
-                }`}>
-                  {convo.avatar}
+          {activeConversations.map((convo) => {
+            const displayName = userRole === 'helper' ? convo.userName : convo.helperName;
+            const initial = displayName ? displayName.charAt(0) : '?';
+            const displayTime = convo.updatedAt ? new Date(convo.updatedAt).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}) : '';
+            
+            return (
+              <div key={convo.id} onClick={() => { setActiveChatContact(convo); handleNavigation('chat'); }}
+                className="flex items-center gap-4 p-5 md:p-6 cursor-pointer hover:bg-slate-50 transition-colors active:bg-blue-50"
+              >
+                <div className="relative shrink-0">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black text-white shadow-md ${userRole === 'helper' ? 'bg-blue-600' : 'bg-emerald-600'}`}>
+                    {initial}
+                  </div>
                 </div>
-                {convo.online && (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white"></div>
-                )}
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className="font-black text-slate-800 text-base truncate">{displayName}</h4>
+                    <span className="text-[11px] font-bold shrink-0 ml-2 text-slate-400">{displayTime}</span>
+                  </div>
+                  <p className="text-xs font-bold text-blue-500 mb-1.5 truncate">📋 {convo.taskTitle}</p>
+                  <p className="text-sm text-slate-500 font-medium truncate leading-snug">{convo.lastMessage || 'Mulai percakapan...'}</p>
+                </div>
+                <ChevronRight size={18} className="text-slate-300 shrink-0" />
               </div>
+            );
+          })}
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start mb-1">
-                  <h4 className="font-black text-slate-800 text-base truncate">{convo.name}</h4>
-                  <span className={`text-[11px] font-bold shrink-0 ml-2 ${convo.unread > 0 ? 'text-blue-600' : 'text-slate-400'}`}>
-                    {convo.time}
-                  </span>
-                </div>
-                <p className="text-xs font-bold text-blue-500 mb-1.5 truncate">📋 {convo.task}</p>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm text-slate-500 font-medium truncate leading-snug">{convo.lastMessage}</p>
-                  {convo.unread > 0 && (
-                    <div className="bg-blue-600 text-white text-[11px] font-black w-5 h-5 rounded-full flex items-center justify-center shrink-0">
-                      {convo.unread}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <ChevronRight size={18} className="text-slate-300 shrink-0" />
-            </div>
-          ))}
-
-          {/* Empty state kalo gada chat */}
-          {chatConversations.length === 0 && (
+          {activeConversations.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
-              <div className="bg-slate-100 p-8 rounded-3xl mb-6">
-                <MessageCircle size={48} className="text-slate-300" />
-              </div>
+              <div className="bg-slate-100 p-8 rounded-3xl mb-6"><MessageCircle size={48} className="text-slate-300" /></div>
               <h3 className="font-black text-slate-700 text-lg mb-2">Belum ada percakapan</h3>
-              <p className="text-slate-400 font-medium text-sm">Percakapan dengan Helper akan muncul di sini setelah task Anda diambil.</p>
+              <p className="text-slate-400 font-medium text-sm">Percakapan dengan {userRole === 'helper' ? 'Pengguna' : 'Helper'} akan muncul di sini setelah ada task yang diambil.</p>
             </div>
           )}
         </div>
@@ -1591,82 +2135,65 @@ export default function App() {
     );
   }
 
-  // CHAT ROOM VIEW 
+  // =======================================================
+  // CHAT ROOM VIEW (REAL-TIME FIREBASE)
+  // =======================================================
   if (currentView === 'chat') {
-    const contact = activeChatContact || chatConversations[0];
-    const [localMessages, setLocalMessages] = useState(contact?.messages || []);
-
-    const handleSendMessage = () => {
-      if (!chatInput.trim()) return;
-      const newMsg = {
-        id: Date.now(),
-        from: 'user',
-        text: chatInput.trim(),
-        time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-      };
-      setLocalMessages(prev => [...prev, newMsg]);
-      setChatInput('');
-    };
+    const currentActiveChat = chats.find(c => c.id === activeChatContact?.id) || activeChatContact;
+    const messages = currentActiveChat?.messages ||[];
+    const displayName = userRole === 'helper' ? currentActiveChat?.userName : currentActiveChat?.helperName;
+    const initial = displayName ? displayName.charAt(0) : '?';
 
     return (
       <DashboardLayout {...dashboardProps}>
-        {/* cht header */}
         <div className="bg-white p-4 md:p-5 sticky top-0 z-10 flex items-center justify-between shadow-sm border-b border-slate-100">
           <div className="flex items-center gap-4">
             <button onClick={() => handleNavigation('chat_list')} className="bg-slate-50 p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition"><ArrowLeft size={20} /></button>
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl text-white shadow-md ${
-              contact?.id === 1 ? 'bg-blue-600' : contact?.id === 2 ? 'bg-emerald-600' : 'bg-purple-600'
-            }`}>
-              {contact?.avatar || 'H'}
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl text-white shadow-md ${userRole === 'helper' ? 'bg-blue-600' : 'bg-emerald-600'}`}>
+              {initial}
             </div>
             <div>
-              <h2 className="font-black text-lg text-slate-900 leading-none mb-1">{contact?.name || 'Helper'}</h2>
-              {contact?.online ? (
-                <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div> Online
-                </span>
-              ) : (
-                <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Offline</span>
-              )}
+              <h2 className="font-black text-lg text-slate-900 leading-none mb-1">{displayName}</h2>
+              <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1">
+                 <div className="w-2 h-2 rounded-full bg-emerald-500"></div> Active Room
+              </span>
             </div>
           </div>
-          {contact?.task && (
-            <div className="bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl hidden sm:block">
-              <p className="text-[10px] font-black text-blue-600 uppercase tracking-wider truncate max-w-[150px]">📋 {contact.task}</p>
+          {currentActiveChat?.taskTitle && (
+            <div className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl hidden sm:block">
+              <p className="text-[10px] font-black text-slate-600 uppercase tracking-wider truncate max-w-[150px]">📋 {currentActiveChat.taskTitle}</p>
             </div>
           )}
         </div>
 
-        {/* Messages */}
-        <div className="p-5 md:p-6 space-y-4 bg-slate-50 flex-1 min-h-[calc(100vh-280px)]">
-          <div className="text-center my-2">
-            <span className="bg-slate-200/70 text-slate-400 text-xs font-bold px-3 py-1 rounded-lg">Today</span>
-          </div>
-          {localMessages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-              {msg.from === 'helper' && (
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm text-white mr-2 shrink-0 mt-1 ${
-                  contact?.id === 1 ? 'bg-blue-600' : contact?.id === 2 ? 'bg-emerald-600' : 'bg-purple-600'
-                }`}>
-                  {contact?.avatar || 'H'}
+        <div className="p-5 md:p-6 space-y-4 bg-slate-50 flex-1 min-h-[calc(100vh-280px)] pb-32">
+          {messages.length === 0 ? (
+             <div className="text-center text-slate-400 font-bold text-sm mt-10">Mulai percakapan sekarang...</div>
+          ) : (
+            messages.map((msg) => {
+              const isMe = msg.from === userRole;
+              return (
+                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                  {!isMe && (
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm text-white mr-2 shrink-0 mt-1 ${userRole === 'helper' ? 'bg-blue-600' : 'bg-emerald-600'}`}>
+                      {initial}
+                    </div>
+                  )}
+                  <div className={`max-w-[75%] p-4 rounded-2xl shadow-sm ${
+                    isMe ? (userRole === 'helper' ? 'bg-emerald-600 text-white rounded-br-none shadow-emerald-200' : 'bg-blue-600 text-white rounded-br-none shadow-blue-200') : 'bg-white text-slate-800 rounded-bl-none border border-slate-100'
+                  }`}>
+                    <p className="text-sm font-medium leading-relaxed">{msg.text}</p>
+                    <p className={`text-[10px] mt-1.5 text-right font-bold ${isMe ? 'text-blue-200' : 'text-slate-400'}`}>
+                      {msg.time}
+                    </p>
+                  </div>
                 </div>
-              )}
-              <div className={`max-w-[75%] p-4 rounded-2xl shadow-sm ${
-                msg.from === 'user' 
-                  ? 'bg-blue-600 text-white rounded-br-none shadow-blue-200' 
-                  : 'bg-white text-slate-800 rounded-bl-none border border-slate-100'
-              }`}>
-                <p className="text-sm font-medium leading-relaxed">{msg.text}</p>
-                <p className={`text-[10px] mt-1.5 text-right font-bold ${msg.from === 'user' ? 'text-blue-200' : 'text-slate-400'}`}>
-                  {msg.time}
-                </p>
-              </div>
-            </div>
-          ))}
+              );
+            })
+          )}
         </div>
 
-        {/* Message Input */}
-        <div className="bg-white p-4 md:p-5 border-t border-slate-100 flex gap-3 sticky bottom-16 md:bottom-0 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+        <div className="bg-white p-4 md:p-5 border-t border-slate-100 flex gap-3 fixed md:absolute bottom-0 w-full shadow-[0_-4px_12px_rgba(0,0,0,0.04)] z-20">
           <input 
             type="text" 
             value={chatInput}
@@ -1677,7 +2204,7 @@ export default function App() {
           />
           <button 
             onClick={handleSendMessage}
-            className="bg-blue-600 w-13 h-13 min-w-[52px] min-h-[52px] rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-200 hover:bg-blue-700 hover:scale-105 transition-all"
+            className={`${userRole === 'helper' ? 'bg-emerald-600 shadow-emerald-200 hover:bg-emerald-700' : 'bg-blue-600 shadow-blue-200 hover:bg-blue-700'} w-13 h-13 min-w-[52px] min-h-[52px] rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg hover:scale-105 transition-all`}
           >
             <Send size={20} className="ml-0.5" />
           </button>
@@ -1699,7 +2226,7 @@ export default function App() {
           <div className="flex gap-2">
             <button onClick={() => setShowNotif(!showNotif)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-full relative">
               <Bell size={24}/>
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+              {notifications.some(n => n.unread) && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
             </button>
             <button onClick={() => handleNavigation('edit_profile')} className="p-2 text-slate-600 hover:bg-slate-100 rounded-full">
               <Settings size={24}/>
@@ -1709,24 +2236,27 @@ export default function App() {
         
         <div className="p-4 md:p-8 bg-slate-50 min-h-full space-y-6">
           <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex items-center gap-6">
-            <div className="bg-blue-600 w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-blue-200">
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-black shadow-lg ${userRole === 'helper' ? 'bg-emerald-600 shadow-emerald-200' : 'bg-blue-600 shadow-blue-200'}`}>
               {userProfile?.name?.charAt(0) || 'U'}
             </div>
             <div className="flex-1">
-              <h2 className="text-xl md:text-2xl font-black text-slate-900 mb-1">{userProfile?.name || 'User Name'}</h2>
+              <h2 className="text-xl md:text-2xl font-black text-slate-900 mb-1 flex items-center gap-2">
+                {userProfile?.name || 'User Name'}
+                {userProfile?.verificationStatus === 'verified' && <ShieldHalf className="text-blue-500" size={18} />}
+              </h2>
               <p className="text-slate-500 text-sm font-bold mb-2">{userProfile?.email}</p>
               <div className="flex items-center text-amber-500 text-xs font-black">
-                <Star size={14} fill="currentColor" className="mr-1"/> {userProfile?.rating || '5.0'} User Rating
+                <Star size={14} fill="currentColor" className="mr-1"/> {userProfile?.rating || '5.0'} {userRole === 'helper' ? 'Helper Rating' : 'User Rating'}
               </div>
             </div>
           </div>
 
-          <div onClick={() => handleNavigation('wallet_history')} className="bg-slate-900 rounded-[2rem] p-6 flex justify-between items-center shadow-lg relative overflow-hidden group cursor-pointer hover:bg-slate-800 transition-colors">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-blue-500 via-transparent to-transparent"></div>
+          <div onClick={() => handleNavigation('wallet_history')} className={`rounded-[2rem] p-6 flex justify-between items-center shadow-lg relative overflow-hidden group cursor-pointer transition-colors ${userRole === 'helper' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-900 hover:bg-slate-800'}`}>
+            <div className={`absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] ${userRole === 'helper' ? 'from-emerald-500' : 'from-blue-500'} via-transparent to-transparent`}></div>
             <div className="flex gap-4 items-center z-10">
-              <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md"><Wallet className="text-blue-400" size={24}/></div>
+              <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md"><Wallet className={userRole === 'helper' ? "text-emerald-400" : "text-blue-400"} size={24}/></div>
               <div>
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">HelpPay Balance</p>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">{userRole === 'helper' ? 'Saldo Pendapatan' : 'HelpPay Balance'}</p>
                 <p className="font-black text-2xl text-white tracking-tight">Rp {(userProfile?.balance || 0).toLocaleString('id-ID')}</p>
               </div>
             </div>
@@ -1734,11 +2264,21 @@ export default function App() {
           </div>
 
           <div className="space-y-4">
-            <div className="bg-white rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm">
-              <h3 className="px-5 py-4 text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 border-b border-slate-100">Profil Saya</h3>
-              <MenuRow icon={<User size={20}/>} label="Ubah Profil" onClick={()=>handleNavigation('edit_profile')}/>
-              <MenuRow icon={<MapPin size={20}/>} label="Daftar Alamat" onClick={()=>handleNavigation('address_list')}/>
-            </div>
+            {userRole === 'helper' ? (
+              <div className="bg-white rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm">
+                <h3 className="px-5 py-4 text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 border-b border-slate-100">Profil Helper</h3>
+                <MenuRow icon={<User size={20}/>} label="Ubah Profil" onClick={()=>handleNavigation('edit_profile')}/>
+                <MenuRow icon={<Briefcase size={20}/>} label="Layanan & Keahlian" onClick={()=>handleNavigation('helper_services')}/>
+                <MenuRow icon={<Building size={20}/>} label="Rekening Bank" onClick={()=>handleNavigation('bank_account')}/>
+                <MenuRow icon={<FileText size={20}/>} label="Dokumen Verifikasi" onClick={()=>handleNavigation('verification')}/>
+              </div>
+            ) : (
+              <div className="bg-white rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm">
+                <h3 className="px-5 py-4 text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 border-b border-slate-100">Profil Saya</h3>
+                <MenuRow icon={<User size={20}/>} label="Ubah Profil" onClick={()=>handleNavigation('edit_profile')}/>
+                <MenuRow icon={<MapPin size={20}/>} label="Daftar Alamat" onClick={()=>handleNavigation('address_list')}/>
+              </div>
+            )}
 
             <div className="bg-white rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm">
               <h3 className="px-5 py-4 text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 border-b border-slate-100">Keamanan & Privasi</h3>
@@ -1767,6 +2307,171 @@ export default function App() {
     );
   }
 
+  // =======================================================
+  // MENU HELPER PROFILE SUB-VIEWS (INTERAKTIF & DATABASE)
+  // =======================================================
+
+  if (currentView === 'helper_services') {
+    const availableServices =['Cleaning', 'Delivery / Jastip', 'Akademik', 'Handyman / Reparasi', 'Teknis / IT', 'Pindahan'];
+    const myServices = userProfile?.services ||[];
+
+    return (
+      <DashboardLayout {...dashboardProps}>
+        <HeaderWithBack title="Layanan & Keahlian" onBack={()=>handleNavigation('profile')} />
+        <div className="p-6 md:p-10 max-w-xl mx-auto space-y-6">
+           <div className="bg-slate-900 border border-slate-800 text-white p-5 rounded-2xl flex items-start gap-4 shadow-lg">
+              <Info className="text-emerald-500 shrink-0 mt-0.5"/>
+              <p className="text-sm font-bold text-slate-300">Pilih jenis layanan yang Anda kuasai. Anda akan menerima notifikasi Order Feed yang relevan dengan keahlian Anda.</p>
+           </div>
+           
+           <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+             <h3 className="font-black text-slate-800 mb-4 text-lg">Katalog Keahlian</h3>
+             <div className="space-y-3">
+               {availableServices.map(srv => {
+                 const isActive = myServices.includes(srv);
+                 return (
+                   <div 
+                     key={srv} 
+                     onClick={() => toggleService(srv)}
+                     className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${isActive ? 'border-emerald-500 bg-emerald-50' : 'border-slate-100 hover:border-emerald-200'}`}
+                   >
+                      <span className={`font-black ${isActive ? 'text-emerald-700' : 'text-slate-600'}`}>{srv}</span>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${isActive ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300'}`}>
+                         {isActive && <CheckCircle size={14}/>}
+                      </div>
+                   </div>
+                 )
+               })}
+             </div>
+           </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (currentView === 'bank_account') {
+    const myBanks = userProfile?.bankAccounts ||[];
+    
+    return (
+      <DashboardLayout {...dashboardProps}>
+        <HeaderWithBack title="Rekening Bank" onBack={()=>handleNavigation('profile')} />
+        <div className="p-6 md:p-10 max-w-xl mx-auto space-y-6">
+           
+           <div className="bg-slate-900 p-6 rounded-[2rem] shadow-lg text-white">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Daftar Rekening Penarikan</h3>
+              {myBanks.length === 0 ? (
+                <p className="text-sm text-slate-500 font-bold mb-2">Belum ada rekening yang ditambahkan.</p>
+              ) : (
+                <div className="space-y-3">
+                  {myBanks.map(bank => (
+                    <div key={bank.id} className="bg-slate-800 border border-slate-700 p-4 rounded-2xl flex justify-between items-center">
+                       <div>
+                         <p className="font-black text-emerald-400">{bank.bankName}</p>
+                         <p className="font-bold text-slate-300 tracking-wider my-1">{bank.accountNumber}</p>
+                         <p className="text-xs text-slate-500 uppercase font-black">a.n {bank.accountName}</p>
+                       </div>
+                       <button onClick={() => handleDeleteBankAccount(bank.id)} className="bg-red-500/10 text-red-500 p-3 rounded-xl hover:bg-red-500 hover:text-white transition"><Trash2 size={18}/></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+           </div>
+
+           <form onSubmit={handleAddBankAccount} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
+             <h3 className="font-black text-slate-800 text-lg mb-2">Tambah Rekening Baru</h3>
+             <div className="space-y-2">
+                <label className="text-xs font-black text-slate-500 uppercase ml-1">Nama Bank</label>
+                <select value={newBankAccount.bankName} onChange={(e)=>setNewBankAccount({...newBankAccount, bankName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none">
+                  <option>BCA</option><option>Mandiri</option><option>BNI</option><option>BRI</option><option>BSI</option><option>Gopay / OVO / Dana</option>
+                </select>
+             </div>
+             <div className="space-y-2">
+                <label className="text-xs font-black text-slate-500 uppercase ml-1">Nomor Rekening / E-Wallet</label>
+                <input required type="number" value={newBankAccount.accountNumber} onChange={(e)=>setNewBankAccount({...newBankAccount, accountNumber: e.target.value})} placeholder="Contoh: 1234567890" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none" />
+             </div>
+             <div className="space-y-2">
+                <label className="text-xs font-black text-slate-500 uppercase ml-1">Nama Pemilik Rekening</label>
+                <input required type="text" value={newBankAccount.accountName} onChange={(e)=>setNewBankAccount({...newBankAccount, accountName: e.target.value})} placeholder="Sesuai buku tabungan" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none" />
+             </div>
+             <button type="submit" className="w-full bg-black text-white font-black py-4 rounded-xl shadow-lg hover:bg-slate-800 mt-2 transition">Simpan Rekening</button>
+           </form>
+
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (currentView === 'verification') {
+    const isVerified = userProfile?.verificationStatus === 'verified';
+
+    return (
+      <DashboardLayout {...dashboardProps}>
+        <HeaderWithBack title="Dokumen Verifikasi" onBack={()=>handleNavigation('profile')} />
+        <div className="p-6 md:p-10 max-w-xl mx-auto space-y-6">
+           
+           {/* Tambahkan file input tersembunyi yang menerima tangkapan gambar secara native dari perangkat pengguna */}
+           <input type="file" accept="image/*" ref={ktpInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'ktp')} />
+           <input type="file" accept="image/*" capture="environment" ref={selfieInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'selfie')} />
+           
+           {isVerified ? (
+             <div className="bg-slate-900 text-white p-8 rounded-[2rem] text-center shadow-lg border border-slate-800">
+               <div className="bg-emerald-500/20 text-emerald-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
+                 <ShieldHalf size={40} />
+               </div>
+               <h2 className="text-2xl font-black mb-2 tracking-tight">Akun Terverifikasi!</h2>
+               <p className="text-slate-400 font-bold text-sm">Terima kasih, dokumen Anda valid. Anda kini mendapat lencana "Verified Helper" dan dapat menerima orderan prioritas.</p>
+             </div>
+           ) : (
+             <>
+               <div className="bg-amber-50 border border-amber-200 p-5 rounded-2xl flex items-start gap-4">
+                  <ShieldHalf className="text-amber-600 shrink-0 mt-0.5"/>
+                  <p className="text-sm font-bold text-amber-800">Harap unggah identitas asli Anda untuk keamanan pengguna aplikasi. Data Anda dijamin kerahasiaannya.</p>
+               </div>
+
+               <div className="space-y-4">
+                 <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm text-center">
+                    <div className="bg-slate-50 w-full h-40 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center mb-4 overflow-hidden">
+                      {uploadingKTP ? (
+                        <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+                      ) : userProfile?.ktpDataUrl ? (
+                        <img src={userProfile.ktpDataUrl} alt="Preview KTP" className="w-full h-full object-cover" />
+                      ) : (
+                        <><CreditCard size={32} className="text-slate-400 mb-2"/> <p className="text-sm font-bold text-slate-500">Preview KTP</p></>
+                      )}
+                    </div>
+                    <h3 className="font-black text-slate-800 mb-1">Upload KTP Asli</h3>
+                    <p className="text-xs text-slate-400 font-bold mb-4">Format JPG/PNG maksimal 2MB</p>
+                    <button onClick={() => ktpInputRef.current.click()} disabled={uploadingKTP} className="w-full bg-slate-900 text-white font-black py-3.5 rounded-xl border border-slate-800 hover:bg-slate-800 flex items-center justify-center gap-2 transition">
+                       <Upload size={18}/> {uploadingKTP ? 'Mengunggah...' : (userProfile?.ktpDataUrl ? 'Ubah Foto KTP' : 'Pilih Foto KTP')}
+                    </button>
+                 </div>
+
+                 <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm text-center">
+                    <div className="bg-slate-50 w-full h-40 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center mb-4 overflow-hidden">
+                      {uploadingSelfie ? (
+                        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                      ) : userProfile?.selfieDataUrl ? (
+                        <img src={userProfile.selfieDataUrl} alt="Preview Selfie" className="w-full h-full object-cover" />
+                      ) : (
+                        <><Camera size={32} className="text-slate-400 mb-2"/> <p className="text-sm font-bold text-slate-500">Preview Selfie</p></>
+                      )}
+                    </div>
+                    <h3 className="font-black text-slate-800 mb-1">Selfie dengan KTP</h3>
+                    <p className="text-xs text-slate-400 font-bold mb-4">Pastikan wajah dan tulisan KTP terlihat jelas</p>
+                    <button onClick={() => selfieInputRef.current.click()} disabled={uploadingSelfie} className="w-full bg-emerald-50 text-emerald-600 font-black py-3.5 rounded-xl border border-emerald-100 hover:bg-emerald-100 flex items-center justify-center gap-2 transition">
+                       <Camera size={18}/> {uploadingSelfie ? 'Memverifikasi...' : (userProfile?.selfieDataUrl ? 'Ubah Foto Selfie' : 'Ambil Foto Selfie')}
+                    </button>
+                 </div>
+               </div>
+             </>
+           )}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // =======================================================
+
   if (currentView === 'edit_profile') {
     return (
       <DashboardLayout {...dashboardProps}>
@@ -1774,10 +2479,10 @@ export default function App() {
         <div className="p-6 md:p-8 max-w-xl mx-auto">
            <div className="flex flex-col items-center mb-8">
               <div className="relative">
-                <div className="bg-blue-600 w-28 h-28 rounded-full flex items-center justify-center text-white text-4xl font-black shadow-xl shadow-blue-200">
+                <div className={`w-28 h-28 rounded-full flex items-center justify-center text-white text-4xl font-black shadow-xl ${userRole === 'helper' ? 'bg-emerald-600 shadow-emerald-200' : 'bg-blue-600 shadow-blue-200'}`}>
                   {userProfile?.name?.charAt(0) || 'U'}
                 </div>
-                <button className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-md border border-slate-100 text-blue-600 hover:scale-110 transition"><PlusCircle size={20}/></button>
+                <button className={`absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-md border border-slate-100 hover:scale-110 transition ${userRole === 'helper' ? 'text-emerald-600' : 'text-blue-600'}`}><PlusCircle size={20}/></button>
               </div>
            </div>
            <div className="space-y-5 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
@@ -1787,12 +2492,12 @@ export default function App() {
                   type="text" 
                   value={editProfileData.name} 
                   onChange={(e) => setEditProfileData({...editProfileData, name: e.target.value})}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:border-blue-500 outline-none" 
+                  className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none ${userRole === 'helper' ? 'focus:border-emerald-500' : 'focus:border-blue-500'}`} 
                 />
              </div>
              <div className="space-y-2">
                <label className="text-xs font-black text-slate-500 uppercase tracking-wider ml-1">Email</label>
-               <input type="email" value={userProfile?.email || ''} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:border-blue-500 outline-none text-slate-500" disabled />
+               <input type="email" value={userProfile?.email || ''} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none text-slate-500" disabled />
                <p className="text-[10px] text-slate-400 font-bold ml-1">Email tidak dapat diubah.</p>
              </div>
              <div className="space-y-2">
@@ -1801,10 +2506,10 @@ export default function App() {
                   type="tel" 
                   value={editProfileData.phone} 
                   onChange={(e) => setEditProfileData({...editProfileData, phone: e.target.value})}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:border-blue-500 outline-none" 
+                  className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none ${userRole === 'helper' ? 'focus:border-emerald-500' : 'focus:border-blue-500'}`} 
                />
              </div>
-             <button onClick={handleSaveProfile} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 mt-4 hover:bg-blue-700 transition">
+             <button onClick={handleSaveProfile} className={`w-full text-white font-black py-4 rounded-xl shadow-lg mt-4 transition ${userRole === 'helper' ? 'bg-emerald-600 shadow-emerald-200 hover:bg-emerald-700' : 'bg-blue-600 shadow-blue-200 hover:bg-blue-700'}`}>
                 Simpan Perubahan
              </button>
            </div>
@@ -1991,33 +2696,39 @@ export default function App() {
   }
 
   if (currentView === 'reviews') {
+    const currentRating = reviews.length > 0 ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1) : '0.0';
+
     return (
       <DashboardLayout {...dashboardProps}>
         <HeaderWithBack title="Ulasan & Rating" onBack={()=>handleNavigation('profile')} />
         <div className="p-6 md:p-8 max-w-2xl mx-auto space-y-4">
           <div className="bg-slate-900 p-8 rounded-[2rem] text-center text-white mb-6">
-             <h3 className="text-5xl font-black mb-2">{userProfile?.rating || '5.0'}</h3>
+             <h3 className="text-5xl font-black mb-2">{currentRating}</h3>
              <div className="flex justify-center text-amber-400 mb-2">
                <Star size={20} fill="currentColor"/><Star size={20} fill="currentColor"/><Star size={20} fill="currentColor"/><Star size={20} fill="currentColor"/><Star size={20} fill="currentColor"/>
              </div>
-             <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Dari Total 2 Ulasan</p>
+             <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Dari Total {reviews.length} Ulasan</p>
           </div>
           
-          {reviews.map(r => (
-            <div key={r.id} className="bg-white p-6 rounded-[1.5rem] border border-slate-100 shadow-sm">
-               <div className="flex justify-between items-start mb-3">
-                 <div className="flex items-center gap-3">
-                   <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-black text-slate-600">{r.user.charAt(0)}</div>
-                   <div>
-                     <h4 className="font-black text-sm text-slate-800">{r.user}</h4>
-                     <p className="text-[10px] text-slate-400 font-bold">{r.date}</p>
+          {reviews.length === 0 ? (
+             <div className="text-center p-10 bg-white rounded-[1.5rem] border border-slate-100 shadow-sm text-slate-500 font-bold">Belum ada ulasan.</div>
+          ) : (
+            reviews.map(r => (
+              <div key={r.id} className="bg-white p-6 rounded-[1.5rem] border border-slate-100 shadow-sm">
+                 <div className="flex justify-between items-start mb-3">
+                   <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-black text-slate-600">{r.user.charAt(0)}</div>
+                     <div>
+                       <h4 className="font-black text-sm text-slate-800">{r.user}</h4>
+                       <p className="text-[10px] text-slate-400 font-bold">{r.date}</p>
+                     </div>
                    </div>
+                   <div className="flex text-amber-400 items-center text-sm font-black gap-1"><Star size={14} fill="currentColor"/> {r.rating}</div>
                  </div>
-                 <div className="flex text-amber-400"><Star size={14} fill="currentColor"/></div>
-               </div>
-               <p className="text-sm text-slate-600 font-medium leading-relaxed">{r.comment}</p>
-            </div>
-          ))}
+                 <p className="text-sm text-slate-600 font-medium leading-relaxed">{r.comment}</p>
+              </div>
+            ))
+          )}
         </div>
       </DashboardLayout>
     );
@@ -2033,12 +2744,18 @@ export default function App() {
           </div>
           <div className="bg-slate-900 p-6 rounded-2xl text-white flex justify-between items-center shadow-lg">
              <div>
-               <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Total Saldo</p>
+               <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">{userRole === 'helper' ? 'Saldo Pendapatan' : 'Total Saldo'}</p>
                <h3 className="text-2xl font-black tracking-tight">Rp {(userProfile?.balance || 0).toLocaleString('id-ID')}</h3>
              </div>
-             <button onClick={() => handleNavigation('top_up')} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 transition">
-                Top Up
-             </button>
+             {userRole === 'helper' ? (
+                <button onClick={() => handleNavigation('withdraw')} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-emerald-700 transition">
+                  Tarik Tunai
+                </button>
+             ) : (
+                <button onClick={() => handleNavigation('top_up')} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 transition">
+                  Top Up
+                </button>
+             )}
           </div>
         </div>
         
@@ -2092,7 +2809,7 @@ export default function App() {
              <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center text-white mx-auto mb-4"><MessageCircle size={28}/></div>
              <h4 className="font-black text-slate-800 text-lg mb-2">Masih butuh bantuan?</h4>
              <p className="text-sm text-slate-500 font-medium mb-6">Tim Support kami siap membantu Anda 24/7 melalui Live Chat.</p>
-             <button className="bg-blue-600 text-white font-black px-6 py-3 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition w-full md:w-auto">Chat with Support</button>
+            <button className="bg-green-600 text-white font-black px-6 py-3 rounded-xl shadow-lg shadow-green-200 hover:bg-green-700 transition w-full md:w-auto">Chat with Support</button>
           </div>
         </div>
       </DashboardLayout>
@@ -2117,6 +2834,60 @@ export default function App() {
             </div>
             <p className="text-[10px] text-slate-300 font-black uppercase tracking-[0.2em] mt-8">© 2026 HELPBLUE.</p>
           </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (currentView === 'withdraw') {
+    return (
+      <DashboardLayout {...dashboardProps}>
+        <HeaderWithBack title="Tarik Tunai" onBack={()=>handleNavigation('wallet_history')} />
+        <div className="p-6 md:p-8 max-w-xl mx-auto space-y-6">
+          <div className="bg-slate-900 p-6 rounded-[2rem] border border-slate-800 shadow-lg text-white">
+             <h3 className="font-black text-slate-400 text-xs uppercase tracking-widest mb-2">Saldo Dapat Ditarik</h3>
+             <h3 className="text-3xl font-black mb-4 tracking-tight">Rp {(userProfile?.balance || 0).toLocaleString('id-ID')}</h3>
+             <div className="mt-4">
+               <label className="text-sm font-bold text-slate-300 ml-1 mb-2 block">Nominal Penarikan</label>
+               <input 
+                 type="number" 
+                 placeholder="Minimal Rp 50.000"
+                 value={withdrawAmount}
+                 onChange={(e) => { setWithdrawAmount(e.target.value); setWithdrawError(''); }}
+                 className="w-full bg-slate-800 border-2 border-transparent focus:border-emerald-500 rounded-xl px-4 py-3 text-sm font-bold outline-none text-white transition placeholder:text-slate-500" 
+               />
+               {withdrawError && <p className="text-red-400 text-xs font-bold mt-2 ml-1">{withdrawError}</p>}
+             </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+             <h3 className="font-black text-slate-800 mb-4">Transfer Ke Bank Anda</h3>
+             <div className="space-y-3">
+               {[
+                 { id: 'bca', name: 'BCA - 1234567890 (a.n Kamu)', icon: <Building size={20}/> },
+                 { id: 'mandiri', name: 'Mandiri - 0987654321 (a.n Kamu)', icon: <Building size={20}/> },
+               ].map(method => (
+                 <div 
+                   key={method.id}
+                   onClick={() => setWithdrawMethod(method.id)}
+                   className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition ${withdrawMethod === method.id ? 'border-emerald-500 bg-emerald-50' : 'border-slate-100 bg-white hover:border-emerald-200'}`}
+                 >
+                   <div className={`${withdrawMethod === method.id ? 'text-emerald-600' : 'text-slate-400'}`}>{method.icon}</div>
+                   <span className="font-black text-slate-700 text-sm">{method.name}</span>
+                 </div>
+               ))}
+             </div>
+             <button onClick={() => handleNavigation('bank_account')} className="mt-4 w-full border-2 border-dashed border-slate-200 text-blue-600 text-sm font-bold py-3 rounded-xl hover:bg-slate-50">
+               + Tambah Rekening Lain
+             </button>
+          </div>
+
+          <button 
+            onClick={handleWithdrawSubmit}
+            className={`w-full text-white font-black py-4 rounded-xl shadow-lg transition ${withdrawAmount && withdrawMethod ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-slate-300 cursor-not-allowed'}`}
+          >
+             Proses Penarikan Dana
+          </button>
         </div>
       </DashboardLayout>
     );
